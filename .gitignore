@@ -1,0 +1,19 @@
+# Dependencies & Electron runtime
+node_modules/
+
+# Build & packaging outputs
+dist/
+build/
+out/
+*.exe
+
+# Logs & OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Runtime user data & caches
+settings.json
+artwork-cache/
+.env

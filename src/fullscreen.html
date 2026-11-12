@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Winh Fullscreen Lyrics</title>
+  <style>
+    :root {
+      --color-1: #7000ff;
+      --color-2: #00d2ff;
+      --color-3: #ff007f;
+      --text: #ffffff;
+      --subtext: rgba(255, 255, 255, 0.68);
+      --muted: rgba(255, 255, 255, 0.42);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #07080d;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Blurred Album Art Backdrop */
+    .backdrop-root {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(85% 75% at 18% 24%, color-mix(in srgb, var(--color-1) 42%, #090a11), transparent 72%),
+        radial-gradient(80% 75% at 85% 78%, color-mix(in srgb, var(--color-2) 36%, #07080f), transparent 74%),
+        #07080d;
+    }
+
+    .backdrop-img {
+      position: absolute;
+      inset: -12%;
+      width: 124%;
+      height: 124%;
+      object-fit: cover;
+      filter: blur(82px) saturate(185%) brightness(0.46);
+      opacity: 0;
+      transform: scale(1.16) translate3d(0, 0, 0);
+      transition: opacity 0.9s ease;
+      animation: ambientDrift 28s ease-in-out infinite alternate;
+      will-change: transform, opacity;
+      pointer-events: none;
+    }
+
+    .backdrop-img.visible {
+      opacity: 1;
+    }
+
+    @keyframes ambientDrift {
+      0% { transform: scale(1.14) translate3d(-1.5%, -1%, 0) rotate(0deg); }
+      50% { transform: scale(1.22) translate3d(1.8%, 1.2%, 0) rotate(2deg); }
+      100% { transform: scale(1.16) translate3d(-1%, 1.8%, 0) rotate(-1.5deg); }
+    }
+
+    .backdrop-scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(120% 100% at 50% 50%, rgba(7, 8, 13, 0.24) 0%, rgba(5, 6, 10, 0.68) 100%),
+        linear-gradient(180deg, rgba(6, 7, 12, 0.32) 0%, rgba(6, 7, 12, 0.14) 50%, rgba(6, 7, 12, 0.45) 100%);
+      pointer-events: none;
+    }
+
+    .backdrop-audio-aura {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.25;
+      box-shadow:
+        inset 0 0 110px color-mix(in srgb, var(--color-1) 42%, transparent),
+        inset 0 0 180px color-mix(in srgb, var(--color-2) 28%, transparent);
+      transition: opacity 0.12s linear;
+    }
+
+    /* Auto-hiding Exit Fullscreen Pill */
+    .top-bar {
+      position: fixed;
+      top: 24px;
+      right: 28px;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .top-bar.idle-hidden {
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+    }
+
+    .exit-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(16, 18, 26, 0.52);
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .exit-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    .exit-btn svg {
+      width: 15px;
+      height: 15px;
+      fill: currentColor;
+    }
+
+    .esc-kbd {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.72);
+      letter-spacing: 0.04em;
+    }
+
+    /* Main Split Stage */
+    .stage {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      height: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: clamp(32px, 5vh, 64px) clamp(36px, 5vw, 84px);
+      display: grid;
+      grid-template-columns: minmax(290px, 410px) minmax(0, 1fr);
+      gap: clamp(36px, 6vw, 96px);
+      align-items: center;
+    }
+
+    /* Left Column: Artwork + Metadata + Scrubbable Progress + Transport */
+    .player-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 20px;
+      width: 100%;
+    }
+
+    .art-stage {
+      position: relative;
+      width: clamp(240px, 26vw, 360px);
+      aspect-ratio: 1 / 1;
+    }
+
+    .art-halo {
+      position: absolute;
+      inset: 10px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, var(--color-1), var(--color-2));
+      filter: blur(36px);
+      opacity: 0.55;
+      z-index: 0;
+      transition: background 0.6s ease, opacity 0.4s ease;
+    }
+
+    .art-card {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow:
+        0 30px 72px rgba(0, 0, 0, 0.62),
+        0 8px 24px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .art-card.paused {
+      transform: scale(0.96);
+    }
+
+    .art-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+    }
+
+    .art-fallback {
+      width: 64px;
+      height: 64px;
+      color: rgba(255, 255, 255, 0.38);
+    }
+
+    .track-meta {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .source-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      padding: 3px 10px 3px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.78);
+      margin-bottom: 4px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .status-dot.playing {
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .status-dot.paused {
+      background: #f59e0b;
+    }
+
+    .fs-title {
+      font-size: clamp(22px, 2.2vw, 30px);
+      font-weight: 750;
+      letter-spacing: -0.025em;
+      line-height: 1.18;
+      color: #ffffff;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .fs-artist {
+      font-size: clamp(14.5px, 1.3vw, 17.5px);
+      font-weight: 500;
+      color: var(--subtext);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Interactive Scrubbable Progress Bar */
+    .progress-wrap {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .scrub-track {
+      position: relative;
+      width: 100%;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      touch-action: none;
+    }
+
+    .scrub-rail {
+      position: relative;
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.16);
+      overflow: hidden;
+      transition: height 0.16s ease;
+    }
+
+    .scrub-track:hover .scrub-rail,
+    .scrub-track.scrubbing .scrub-rail {
+      height: 7px;
+    }
+
+    .scrub-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+    }
+
+    .scrub-knob {
+      position: absolute;
+      top: 50%;
+      left: 0%;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.15s ease;
+      pointer-events: none;
+    }
+
+    .scrub-track:hover .scrub-knob,
+    .scrub-track.scrubbing .scrub-knob {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .time-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+
+    /* Transport Controls */
+    .transport-row {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 2px;
+    }
+
+    .t-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.86);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.14s ease, color 0.18s ease;
+    }
+
+    .t-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      transform: scale(1.06);
+    }
+
+    .t-btn:active {
+      transform: scale(0.94);
+    }
+
+    .t-btn.primary {
+      width: 58px;
+      height: 58px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #0b0c12;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    .t-btn.primary:hover {
+      background: #ffffff;
+      transform: scale(1.07);
+    }
+
+    .t-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .t-btn.primary svg {
+      width: 26px;
+      height: 26px;
+    }
+
+    /* Right Column: 3D Depth-Layered Scrolling Synced Lyrics */
+    .lyrics-col {
+      position: relative;
+      height: 82vh;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .lyrics-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      perspective: 1100px;
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+      mask-image: linear-gradient(180deg, transparent 0%, #000 16%, #000 84%, transparent 100%);
+      display: none;
+    }
+
+    .lyrics-col[data-mode="synced"] .lyrics-stage {
+      display: block;
+    }
+
+    .lyrics-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 0 8px 0 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transform-style: preserve-3d;
+      transition: transform 0.56s cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+    }
+
+    .fs-lyric-line {
+      appearance: none;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      font-family: inherit;
+      font-size: clamp(24px, 2.75vw, 38px);
+      font-weight: 700;
+      line-height: 1.24;
+      letter-spacing: -0.022em;
+      color: rgba(255, 255, 255, 0.85);
+      transform-origin: left center;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 12px;
+      transition:
+        transform 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.45s ease,
+        filter 0.45s ease,
+        color 0.35s ease,
+        text-shadow 0.45s ease,
+        background 0.22s ease;
+      will-change: transform, opacity, filter;
+    }
+
+    .fs-lyric-line:hover {
+      background: rgba(255, 255, 255, 0.06);
+      filter: blur(0px) !important;
+      opacity: 0.96 !important;
+    }
+
+    /* 3D Depth-of-Field Layers */
+    .fs-lyric-line.dist-0 {
+      opacity: 1;
+      color: #ffffff;
+      filter: blur(0px);
+      transform: translate3d(0, 0, 24px) scale(1.03);
+      text-shadow: 0 2px 26px rgba(255, 255, 255, 0.24);
+    }
+
+    .fs-lyric-line.dist-1 {
+      opacity: 0.54;
+      filter: blur(0.8px);
+      transform: translate3d(0, 0, -18px) scale(0.95) rotateX(var(--tilt, -3deg));
+    }
+
+    .fs-lyric-line.dist-2 {
+      opacity: 0.33;
+      filter: blur(2.1px);
+      transform: translate3d(0, 0, -54px) scale(0.90) rotateX(var(--tilt, -6deg));
+    }
+
+    .fs-lyric-line.dist-3 {
+      opacity: 0.18;
+      filter: blur(3.4px);
+      transform: translate3d(0, 0, -90px) scale(0.85) rotateX(var(--tilt, -8deg));
+    }
+
+    .fs-lyric-line.dist-far {
+      opacity: 0.08;
+      filter: blur(4.5px);
+      transform: translate3d(0, 0, -124px) scale(0.81);
+    }
+
+    .fs-lyric-line.is-past.dist-1 { opacity: 0.38; --tilt: 3deg; }
+    .fs-lyric-line.is-past.dist-2 { opacity: 0.22; --tilt: 6deg; }
+    .fs-lyric-line.is-past.dist-3 { opacity: 0.12; --tilt: 8deg; }
+
+    /* When user scrolls manually with wheel, reduce blur temporarily to browse */
+    .lyrics-stage.browsing .fs-lyric-line {
+      filter: blur(0px);
+      opacity: 0.72;
+    }
+
+    .lyrics-stage.browsing .fs-lyric-line.dist-0 {
+      opacity: 1;
+    }
+
+    /* Plain Unsynced Scrollable View */
+    .plain-stage {
+      display: none;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      padding: 48px 16px 64px 4px;
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+      mask-image: linear-gradient(180deg, transparent 0%, #000 10%, #000 90%, transparent 100%);
+      font-size: clamp(20px, 2vw, 26px);
+      font-weight: 600;
+      line-height: 1.65;
+      color: rgba(255, 255, 255, 0.84);
+      white-space: pre-line;
+    }
+
+    .plain-stage::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .plain-stage::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+    }
+
+    .lyrics-col[data-mode="plain"] .plain-stage {
+      display: block;
+    }
+
+    /* Status / Empty / Instrumental View */
+    .status-stage {
+      display: none;
+      width: 100%;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      padding-left: 8px;
+      font-size: clamp(20px, 2.2vw, 28px);
+      font-weight: 650;
+      color: rgba(255, 255, 255, 0.56);
+    }
+
+    .lyrics-col[data-mode="status"] .status-stage {
+      display: flex;
+    }
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color-2);
+      box-shadow: 0 0 14px var(--color-2);
+      animation: dotPulse 1.3s ease-in-out infinite;
+    }
+
+    @keyframes dotPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.35); opacity: 0.6; }
+    }
+
+    @media (max-width: 820px) {
+      .stage {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        gap: 24px;
+      }
+      .player-col {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+      }
+      .art-stage {
+        width: 96px;
+      }
+      .lyrics-col {
+        height: 55vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="backdrop-root">
+    <img class="backdrop-img" id="backdrop-a" alt="" />
+    <img class="backdrop-img" id="backdrop-b" alt="" />
+  </div>
+  <div class="backdrop-scrim"></div>
+  <div class="backdrop-audio-aura" id="backdrop-aura"></div>
+
+  <div class="top-bar" id="top-bar">
+    <button class="exit-btn" id="btn-exit">
+      <svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+      <span>Exit Fullscreen</span>
+      <span class="esc-kbd">ESC</span>
+    </button>
+  </div>
+
+  <main class="stage">
+    <!-- Left Column -->
+    <section class="player-col">
+      <div class="art-stage">
+        <div class="art-halo" id="art-halo"></div>
+        <div class="art-card" id="art-card">
+          <svg class="art-fallback" id="art-fallback" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+          </svg>
+          <img id="art-img" alt="" />
+        </div>
+      </div>
+
+      <div class="track-meta">
+        <div class="source-chip">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="app-name">Winh Media</span>
+        </div>
+        <div class="fs-title" id="track-title">Waiting for music...</div>
+        <div class="fs-artist" id="track-artist">Play Spotify, YouTube, or browser audio</div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="scrub-track" id="scrub-track">
+          <div class="scrub-rail">
+            <div class="scrub-fill" id="scrub-fill"></div>
+          </div>
+          <div class="scrub-knob" id="scrub-knob"></div>
+        </div>
+        <div class="time-row">
+          <span id="time-elapsed">0:00</span>
+          <span id="time-duration">0:00</span>
+        </div>
+      </div>
+
+      <div class="transport-row">
+        <button class="t-btn" id="btn-prev" title="Previous">
+          <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+        </button>
+        <button class="t-btn primary" id="btn-play-pause" title="Play / Pause">
+          <svg id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></svg>
+        </button>
+        <button class="t-btn" id="btn-next" title="Next">
+          <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 18l8.5-6L6 6z"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Right Column: 3D Depth-Layered Synced Lyrics -->
+    <section class="lyrics-col" id="lyrics-col" data-mode="status">
+      <div class="lyrics-stage" id="lyrics-stage">
+        <div class="lyrics-track" id="lyrics-track"></div>
+      </div>
+      <div class="plain-stage" id="plain-stage"></div>
+      <div class="status-stage" id="status-stage">
+        <span id="status-text">Play a song for fullscreen 3D lyrics</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    const topBar = document.getElementById('top-bar');
+    const btnExit = document.getElementById('btn-exit');
+    const backdropA = document.getElementById('backdrop-a');
+    const backdropB = document.getElementById('backdrop-b');
+    const backdropAura = document.getElementById('backdrop-aura');
+
+    const artCard = document.getElementById('art-card');
+    const artImg = document.getElementById('art-img');
+    const artFallback = document.getElementById('art-fallback');
+    const statusDot = document.getElementById('status-dot');
+    const appNameEl = document.getElementById('app-name');
+    const trackTitleEl = document.getElementById('track-title');
+    const trackArtistEl = document.getElementById('track-artist');
+
+    const scrubTrack = document.getElementById('scrub-track');
+    const scrubFill = document.getElementById('scrub-fill');
+    const scrubKnob = document.getElementById('scrub-knob');
+    const timeElapsedEl = document.getElementById('time-elapsed');
+    const timeDurationEl = document.getElementById('time-duration');
+
+    const btnPrev = document.getElementById('btn-prev');
+    const btnPlayPause = document.getElementById('btn-play-pause');
+    const btnNext = document.getElementById('btn-next');
+    const iconPlay = document.getElementById('icon-play');
+    const iconPause = document.getElementById('icon-pause');
+
+    const lyricsCol = document.getElementById('lyrics-col');
+    const lyricsStage = document.getElementById('lyrics-stage');
+    const lyricsTrack = document.getElementById('lyrics-track');
+    const plainStage = document.getElementById('plain-stage');
+    const statusStage = document.getElementById('status-stage');
+
+    let mediaState = {
+      active: false,
+      status: 'Stopped',
+      position: 0,
+      duration: 0,
+      lastUpdatedMs: Date.now(),
+      thumbnailKey: ''
+    };
+
+    let lyricsState = {
+      isSynced: false,
+      syncedLyrics: [],
+      lineEls: [],
+      activeIdx: -99
+    };
+
+    let activeBackdropSlot = 'a';
+    let isScrubbing = false;
+    let scrubPreviewRatio = 0;
+    let manualBrowseTimer = null;
+    let manualBrowseOffset = 0;
+    let isManualBrowsing = false;
+
+    let audioAuraSmooth = 0;
+    let audioAuraTarget = 0;
+    let lastPctText = '';
+    let lastElapsedText = '';
+    let rafId = null;
+
+    // --- Auto-hide Exit Pill on mouse idle ---
+    let idleHideTimer = null;
+    function revealTopBar() {
+      topBar.classList.remove('idle-hidden');
+      if (idleHideTimer) clearTimeout(idleHideTimer);
+      idleHideTimer = setTimeout(() => {
+        if (!topBar.matches(':hover')) {
+          topBar.classList.add('idle-hidden');
+        }
+      }, 2600);
+    }
+
+    window.addEventListener('mousemove', revealTopBar);
+    revealTopBar();
+
+    function exitFullscreen() {
+      ipcRenderer.send('toggle-fullscreen-lyrics', false);
+    }
+
+    btnExit.addEventListener('click', exitFullscreen);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        exitFullscreen();
+      } else if (e.code === 'Space' && !e.target.closest('button')) {
+        e.preventDefault();
+        ipcRenderer.send('media-control', 'play-pause');
+      }
+    });
+
+    // --- Transport Controls ---
+    btnPrev.addEventListener('click', () => ipcRenderer.send('media-control', 'previous'));
+    btnPlayPause.addEventListener('click', () => ipcRenderer.send('media-control', 'play-pause'));
+    btnNext.addEventListener('click', () => ipcRenderer.send('media-control', 'next'));
+
+    // --- Scrubbable Progress Bar ---
+    function getScrubRatio(clientX) {
+      const rect = scrubTrack.getBoundingClientRect();
+      if (rect.width <= 0) return 0;
+      return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    }
+
+    function applyProgressVisual(ratio) {
+      const pctStr = `${(ratio * 100).toFixed(2)}%`;
+      if (pctStr !== lastPctText) {
+        lastPctText = pctStr;
+        scrubFill.style.width = pctStr;
+        scrubKnob.style.left = pctStr;
+      }
+    }
+
+    scrubTrack.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || mediaState.duration <= 0) return;
+      e.preventDefault();
+      isScrubbing = true;
+      scrubTrack.classList.add('scrubbing');
+      if (scrubTrack.setPointerCapture) {
+        scrubTrack.setPointerCapture(e.pointerId);
+      }
+      scrubPreviewRatio = getScrubRatio(e.clientX);
+      applyProgressVisual(scrubPreviewRatio);
+      timeElapsedEl.textContent = formatTime(scrubPreviewRatio * mediaState.duration);
+    });
+
+    scrubTrack.addEventListener('pointermove', (e) => {
+      if (!isScrubbing) return;
+      scrubPreviewRatio = getScrubRatio(e.clientX);
+      applyProgressVisual(scrubPreviewRatio);
+      timeElapsedEl.textContent = formatTime(scrubPreviewRatio * mediaState.duration);
+    });
+
+    function finishScrub(e) {
+      if (!isScrubbing) return;
+      isScrubbing = false;
+      scrubTrack.classList.remove('scrubbing');
+      if (scrubTrack.releasePointerCapture && e.pointerId !== undefined) {
+        try {
+          scrubTrack.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+      }
+      if (mediaState.duration > 0) {
+        const targetSec = scrubPreviewRatio * mediaState.duration;
+        mediaState.position = targetSec;
+        mediaState.lastUpdatedMs = Date.now();
+        ipcRenderer.send('seek-media', targetSec);
+        syncPlayheadAndLyrics(Date.now());
+      }
+    }
+
+    scrubTrack.addEventListener('pointerup', finishScrub);
+    scrubTrack.addEventListener('pointercancel', finishScrub);
+
+    // --- Backdrop Crossfade & Artwork Loading Helpers ---
+    let artLoadSeq = 0;
+    let backdropLoadSeq = 0;
+
+    function resolveArtworkSrc(data) {
+      if (!data) return '';
+      if (typeof data.thumbnailDataUrl === 'string' && data.thumbnailDataUrl.startsWith('data:image/')) {
+        return data.thumbnailDataUrl;
+      }
+      if (typeof data.thumbnail === 'string' && data.thumbnail.trim().length > 16) {
+        const mime = data.thumbnailMime || 'image/jpeg';
+        return `data:${mime};base64,${data.thumbnail.trim()}`;
+      }
+      return '';
+    }
+
+    function computeThumbKey(src) {
+      if (!src) return '';
+      const mid = Math.floor(src.length / 2);
+      return `${src.length}:${src.slice(0, 48)}:${src.slice(mid, mid + 24)}:${src.slice(-24)}`;
+    }
+
+    function updateBackdropImage(src) {
+      const seq = ++backdropLoadSeq;
+      if (!src) {
+        backdropA.onload = null;
+        backdropB.onload = null;
+        backdropA.classList.remove('visible');
+        backdropB.classList.remove('visible');
+        backdropA.removeAttribute('src');
+        backdropB.removeAttribute('src');
+        return;
+      }
+      const incoming = activeBackdropSlot === 'a' ? backdropB : backdropA;
+      const outgoing = activeBackdropSlot === 'a' ? backdropA : backdropB;
+      activeBackdropSlot = activeBackdropSlot === 'a' ? 'b' : 'a';
+
+      const showIncoming = () => {
+        if (seq !== backdropLoadSeq) return;
+        incoming.classList.add('visible');
+        outgoing.classList.remove('visible');
+      };
+
+      incoming.onload = showIncoming;
+      incoming.onerror = () => {
+        if (seq !== backdropLoadSeq) return;
+        incoming.classList.remove('visible');
+      };
+      incoming.src = src;
+      if (incoming.complete && incoming.naturalWidth > 0) {
+        showIncoming();
+      }
+    }
+
+    function applyArtwork(src) {
+      const seq = ++artLoadSeq;
+      if (!src) {
+        artImg.onload = null;
+        artImg.onerror = null;
+        artImg.removeAttribute('src');
+        artImg.style.display = 'none';
+        artFallback.style.display = 'block';
+        updateBackdropImage('');
+        return;
+      }
+
+      const showArt = () => {
+        if (seq !== artLoadSeq) return;
+        artImg.style.display = 'block';
+        artFallback.style.display = 'none';
+      };
+
+      artImg.onload = showArt;
+      artImg.onerror = () => {
+        if (seq !== artLoadSeq) return;
+        artImg.style.display = 'none';
+        artFallback.style.display = 'block';
+        updateBackdropImage('');
+      };
+      artImg.src = src;
+      if (artImg.complete && artImg.naturalWidth > 0) {
+        showArt();
+      }
+      updateBackdropImage(src);
+    }
+
+    // --- Lyrics Rendering & 3D Depth Positioning ---
+    function setStatusView(text, showShimmer = false) {
+      lyricsCol.setAttribute('data-mode', 'status');
+      statusStage.textContent = '';
+      if (showShimmer) {
+        const dot = document.createElement('span');
+        dot.className = 'pulse-dot';
+        statusStage.appendChild(dot);
+      }
+      const span = document.createElement('span');
+      span.textContent = text;
+      statusStage.appendChild(span);
+    }
+
+    function buildSyncedLines(lines) {
+      lyricsTrack.textContent = '';
+      lyricsState.lineEls = [];
+      lyricsState.activeIdx = -99;
+      manualBrowseOffset = 0;
+      isManualBrowsing = false;
+      lyricsStage.classList.remove('browsing');
+
+      lines.forEach((line, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fs-lyric-line dist-far';
+        btn.textContent = line.text;
+        btn.addEventListener('click', () => {
+          btn.blur();
+          isManualBrowsing = false;
+          manualBrowseOffset = 0;
+          lyricsStage.classList.remove('browsing');
+          mediaState.position = line.time;
+          mediaState.lastUpdatedMs = Date.now();
+          ipcRenderer.send('seek-media', line.time);
+          syncPlayheadAndLyrics(Date.now());
+        });
+        lyricsTrack.appendChild(btn);
+        lyricsState.lineEls.push(btn);
+      });
+
+      requestAnimationFrame(() => updateSyncedLayout(lyricsState.activeIdx));
+    }
+
+    function updateSyncedLayout(activeIdx) {
+      const els = lyricsState.lineEls;
+      if (!els.length) return;
+
+      const stageH = lyricsStage.clientHeight || window.innerHeight * 0.8;
+      const focusIdx = activeIdx >= 0 ? activeIdx : 0;
+
+      for (let i = 0; i < els.length; i++) {
+        const el = els[i];
+        const diff = i - focusIdx;
+        const abs = Math.abs(diff);
+
+        el.classList.remove('dist-0', 'dist-1', 'dist-2', 'dist-3', 'dist-far', 'is-past');
+        if (activeIdx < 0 && i === 0) {
+          // Pre-intro: keep first line softly poised as upcoming
+          el.classList.add('dist-1');
+        } else if (abs === 0) {
+          el.classList.add('dist-0');
+        } else if (abs === 1) {
+          el.classList.add('dist-1');
+        } else if (abs === 2) {
+          el.classList.add('dist-2');
+        } else if (abs === 3) {
+          el.classList.add('dist-3');
+        } else {
+          el.classList.add('dist-far');
+        }
+
+        if (diff < 0 && activeIdx >= 0) {
+          el.classList.add('is-past');
+        }
+      }
+
+      const targetEl = els[focusIdx];
+      if (!targetEl) return;
+
+      const anchorY = stageH * 0.46;
+      const centerOffset = targetEl.offsetTop + targetEl.offsetHeight * 0.5;
+      let translateY = anchorY - centerOffset;
+
+      if (isManualBrowsing) {
+        const maxTrackScroll = Math.max(0, lyricsTrack.scrollHeight - stageH * 0.4);
+        translateY = Math.min(anchorY, Math.max(-maxTrackScroll, translateY + manualBrowseOffset));
+      }
+
+      lyricsTrack.style.transform = `translate3d(0, ${Math.round(translateY)}px, 0)`;
+    }
+
+    lyricsStage.addEventListener('wheel', (e) => {
+      if (!lyricsState.isSynced || !lyricsState.lineEls.length) return;
+      e.preventDefault();
+      isManualBrowsing = true;
+      lyricsStage.classList.add('browsing');
+      manualBrowseOffset -= e.deltaY * 0.75;
+
+      const maxRange = lyricsTrack.scrollHeight || 800;
+      manualBrowseOffset = Math.max(-maxRange, Math.min(maxRange, manualBrowseOffset));
+      updateSyncedLayout(lyricsState.activeIdx);
+
+      if (manualBrowseTimer) clearTimeout(manualBrowseTimer);
+      manualBrowseTimer = setTimeout(() => {
+        isManualBrowsing = false;
+        manualBrowseOffset = 0;
+        lyricsStage.classList.remove('browsing');
+        updateSyncedLayout(lyricsState.activeIdx);
+      }, 3400);
+    }, { passive: false });
+
+    function formatTime(sec) {
+      if (!Number.isFinite(sec) || sec < 0) return '0:00';
+      const total = Math.floor(sec);
+      const mins = Math.floor(total / 60);
+      const secs = total % 60;
+      return `${mins}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // --- IPC Handlers ---
+    ipcRenderer.on('settings-updated', (_e, s) => {
+      if (!s) return;
+      const rootStyle = document.documentElement.style;
+      rootStyle.setProperty('--color-1', s.color1 || '#7000ff');
+      rootStyle.setProperty('--color-2', s.color2 || '#00d2ff');
+      rootStyle.setProperty('--color-3', s.color3 || '#ff007f');
+    });
+
+    ipcRenderer.on('audio-level', (_e, lvl) => {
+      if (!lvl) return;
+      const energy = (Number(lvl.level) || 0) * 0.5 + (Number(lvl.bass) || 0) * 0.5;
+      audioAuraTarget = lvl.active ? Math.min(1, energy) : 0.08;
+      scheduleLoop();
+    });
+
+    ipcRenderer.on('media-update', (_e, data) => {
+      if (!data || !data.title || data.status === 'Closed') {
+        mediaState.active = false;
+        mediaState.status = 'Stopped';
+        mediaState.position = 0;
+        mediaState.duration = 0;
+        mediaState.thumbnailKey = '';
+
+        statusDot.className = 'status-dot';
+        artCard.classList.add('paused');
+        iconPlay.style.display = 'block';
+        iconPause.style.display = 'none';
+        appNameEl.textContent = 'Winh Media';
+        trackTitleEl.textContent = 'Waiting for music...';
+        trackArtistEl.textContent = 'Play Spotify, YouTube, or browser audio';
+        timeElapsedEl.textContent = '0:00';
+        timeDurationEl.textContent = '0:00';
+        lastPctText = '';
+        lastElapsedText = '';
+        applyProgressVisual(0);
+
+        applyArtwork('');
+
+        lyricsState.isSynced = false;
+        lyricsState.syncedLyrics = [];
+        lyricsState.lineEls = [];
+        lyricsState.activeIdx = -99;
+        lyricsTrack.textContent = '';
+        plainStage.textContent = '';
+        setStatusView('Play a song for fullscreen 3D lyrics');
+        return;
+      }
+
+      const isPlaying = data.status === 'Playing';
+      const isPaused = data.status === 'Paused';
+
+      mediaState.active = Boolean(data.active !== false);
+      mediaState.status = data.status || 'Unknown';
+      mediaState.position = Number(data.position) || 0;
+      mediaState.duration = Number(data.duration) || 0;
+      mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || Date.now();
+
+      statusDot.className = 'status-dot' + (isPlaying ? ' playing' : isPaused ? ' paused' : '');
+      artCard.classList.toggle('paused', !isPlaying);
+      iconPlay.style.display = isPlaying ? 'none' : 'block';
+      iconPause.style.display = isPlaying ? 'block' : 'none';
+
+      appNameEl.textContent = data.appName || 'Winh Media';
+      trackTitleEl.textContent = data.cleanTitle || data.title || 'Unknown Track';
+      trackArtistEl.textContent = data.cleanArtist || data.artist || 'Unknown Artist';
+
+      const artSrc = resolveArtworkSrc(data);
+      const thumbKey = computeThumbKey(artSrc);
+      if (thumbKey !== mediaState.thumbnailKey) {
+        mediaState.thumbnailKey = thumbKey;
+        applyArtwork(artSrc);
+      }
+
+      timeDurationEl.textContent = mediaState.duration > 0 ? formatTime(mediaState.duration) : (isPlaying ? 'LIVE' : '--:--');
+      syncPlayheadAndLyrics(Date.now());
+      scheduleLoop();
+    });
+
+    ipcRenderer.on('lyrics-update', (_e, lyricsData) => {
+      if (!lyricsData) {
+        lyricsState.isSynced = false;
+        lyricsState.syncedLyrics = [];
+        lyricsState.lineEls = [];
+        lyricsTrack.textContent = '';
+        setStatusView('Play a song for fullscreen 3D lyrics');
+        return;
+      }
+
+      if (lyricsData.loading) {
+        lyricsState.isSynced = false;
+        lyricsState.syncedLyrics = [];
+        lyricsState.lineEls = [];
+        lyricsTrack.textContent = '';
+        setStatusView('Finding synced lyrics...', true);
+        return;
+      }
+
+      if (lyricsData.instrumental) {
+        lyricsState.isSynced = false;
+        lyricsState.syncedLyrics = [];
+        lyricsState.lineEls = [];
+        lyricsTrack.textContent = '';
+        setStatusView('♪ Instrumental');
+        return;
+      }
+
+      if (lyricsData.success && lyricsData.isSynced && Array.isArray(lyricsData.syncedLyrics) && lyricsData.syncedLyrics.length > 0) {
+        lyricsState.isSynced = true;
+        lyricsState.syncedLyrics = lyricsData.syncedLyrics;
+        lyricsCol.setAttribute('data-mode', 'synced');
+        buildSyncedLines(lyricsData.syncedLyrics);
+        syncPlayheadAndLyrics(Date.now());
+        scheduleLoop();
+        return;
+      }
+
+      if (lyricsData.success && lyricsData.plainLyrics && lyricsData.plainLyrics.trim()) {
+        lyricsState.isSynced = false;
+        lyricsState.syncedLyrics = [];
+        lyricsState.lineEls = [];
+        lyricsTrack.textContent = '';
+        lyricsCol.setAttribute('data-mode', 'plain');
+        plainStage.textContent = lyricsData.plainLyrics.trim();
+        plainStage.scrollTop = 0;
+        return;
+      }
+
+      lyricsState.isSynced = false;
+      lyricsState.syncedLyrics = [];
+      lyricsState.lineEls = [];
+      lyricsTrack.textContent = '';
+      setStatusView('No lyrics found for this track');
+    });
+
+    function syncPlayheadAndLyrics(nowMs) {
+      if (!mediaState.active && mediaState.duration <= 0) return;
+
+      let estimatedPos = mediaState.position;
+      if (mediaState.status === 'Playing') {
+        estimatedPos += Math.max(0, (nowMs - mediaState.lastUpdatedMs) / 1000);
+      }
+
+      if (!isScrubbing) {
+        if (mediaState.duration > 0) {
+          estimatedPos = Math.min(mediaState.duration, Math.max(0, estimatedPos));
+          applyProgressVisual(estimatedPos / mediaState.duration);
+        } else {
+          applyProgressVisual(mediaState.status === 'Playing' ? 1 : 0);
+        }
+
+        const elapsedStr = formatTime(estimatedPos);
+        if (elapsedStr !== lastElapsedText) {
+          lastElapsedText = elapsedStr;
+          timeElapsedEl.textContent = elapsedStr;
+        }
+      }
+
+      if (lyricsState.isSynced && lyricsState.syncedLyrics.length > 0) {
+        const lines = lyricsState.syncedLyrics;
+        const syncPos = estimatedPos + 0.15;
+        let activeIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].time <= syncPos) {
+            activeIdx = i;
+          } else {
+            break;
+          }
+        }
+        if (activeIdx !== lyricsState.activeIdx) {
+          lyricsState.activeIdx = activeIdx;
+          updateSyncedLayout(activeIdx);
+        }
+      }
+    }
+
+    // --- Lightweight Refresh-Rate-Adaptive Loop ---
+    let lastFrameMs = performance.now();
+    function scheduleLoop() {
+      if (rafId !== null) return;
+      lastFrameMs = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function loop(nowMs) {
+      rafId = null;
+      const dt = Math.min(0.05, Math.max(0.001, (nowMs - lastFrameMs) / 1000));
+      lastFrameMs = nowMs;
+
+      audioAuraSmooth += (audioAuraTarget - audioAuraSmooth) * (1 - Math.exp(-dt * 12));
+      backdropAura.style.opacity = (0.16 + audioAuraSmooth * 0.55).toFixed(3);
+
+      syncPlayheadAndLyrics(Date.now());
+
+      const needsMore =
+        (mediaState.active && mediaState.status === 'Playing') ||
+        Math.abs(audioAuraTarget - audioAuraSmooth) > 0.01;
+
+      if (needsMore) {
+        rafId = requestAnimationFrame(loop);
+      }
+    }
+
+    window.addEventListener('resize', () => {
+      if (lyricsState.isSynced && lyricsState.lineEls.length > 0) {
+        updateSyncedLayout(lyricsState.activeIdx);
+      }
+    });
+
+    ipcRenderer.send('fullscreen-ready');
+  </script>
+</body>
+</html>

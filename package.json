@@ -1,0 +1,32 @@
+{
+  "name": "winh",
+  "version": "1.0.0",
+  "description": "Winh - Ambient edge lighting, tray flyout controls, WASAPI beat sync, and 3D fullscreen synced lyrics for Windows",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging",
+    "check": "node --check index.js && node --check src/smtc.js && node --check src/lyrics.js && node --check src/backend/audioMeter.js && node --check src/backend/artworkLookup.js && node --check src/backend/colorExtractor.js && node --check src/backend/settingsStore.js && node --check src/backend/trayIcon.js"
+  },
+  "keywords": [
+    "winh",
+    "electron",
+    "windows",
+    "ambient",
+    "rim-light",
+    "lyrics",
+    "smtc",
+    "wasapi"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.3.0"
+  },
+  "dependencies": {
+    "colorthief": "^3.5.0",
+    "node-fetch": "^3.3.2",
+    "ws": "^8.22.2"
+  }
+}
