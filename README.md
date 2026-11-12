@@ -6,8 +6,8 @@ Ambient screen-edge rim lighting, system audio beat sync, floating mini-player w
 
 Download the latest Windows release from **GitHub Releases**:
 
-- **`Winh-Portable-1.0.0.exe`** — Standalone portable executable; double-click to run immediately with zero installation.
-- **`Winh-Setup-1.0.0.exe`** — Standard Windows installer with Start Menu and Desktop shortcuts.
+- **`Winh-Portable-1.0.1.exe`** — Standalone portable executable; double-click to run immediately with zero installation.
+- **`Winh-Setup-1.0.1.exe`** — Standard Windows installer with Start Menu and Desktop shortcuts.
 
 > **Windows SmartScreen note:** Because the release binaries are currently unsigned, Windows Defender SmartScreen may show *"Windows protected your PC"* on first launch. Click **More info** -> **Run anyway** to start Winh.
 
@@ -22,7 +22,7 @@ Once running, click the **Winh** icon in your Windows system tray (near the cloc
 - **Synced & Plain Lyrics (`LRCLIB`)**: Cleans Spotify and YouTube/browser titles (`src/lyrics.js`) to fetch timestamped LRC or plain lyrics.
 - **Floating Mini-Widget & Minimize Pill**: Draggable, click-through-safe frosted glass tile (`src/overlay.html`) with hover transport controls and a minimize-to-pill toggle.
 - **Fullscreen 3D Art Lyrics**: Apple Music / Spotify-inspired two-column fullscreen view (`src/fullscreen.html`) with blurred album backdrop, scrubbable timeline, and depth-layered scrolling lyrics.
-- **Windows Tray Flyout**: Lives in the Windows system tray (`src/settings.html`) and auto-dismisses when clicking outside, with dual RGB color wheels, thickness/glow/corner-radius/opacity sliders, display selector, and mode toggles.
+- **Windows Tray Flyout**: Lives in the Windows system tray (`src/settings.html`) and auto-dismisses when clicking outside, with dual RGB color wheels, rotation speed & audio reactivity sliders, thickness/glow/corner-radius/opacity sliders, display selector, and mode toggles.
 
 ## Run from Source
 
@@ -44,7 +44,7 @@ npm start
 npm run dist
 ```
 
-Outputs `dist/Winh-Portable-1.0.0.exe` and `dist/Winh-Setup-1.0.0.exe`.
+Outputs `dist/Winh-Portable-1.0.1.exe` and `dist/Winh-Setup-1.0.1.exe`.
 
 ### Verification
 

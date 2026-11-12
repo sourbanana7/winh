@@ -749,6 +749,10 @@
 
     let audioAuraSmooth = 0;
     let audioAuraTarget = 0;
+    let currentSettings = {
+      rotationSpeed: 1.0,
+      reactivity: 1.0
+    };
     let lastPctText = '';
     let lastElapsedText = '';
     let rafId = null;
@@ -1053,6 +1057,7 @@
     // --- IPC Handlers ---
     ipcRenderer.on('settings-updated', (_e, s) => {
       if (!s) return;
+      Object.assign(currentSettings, s);
       const rootStyle = document.documentElement.style;
       rootStyle.setProperty('--color-1', s.color1 || '#7000ff');
       rootStyle.setProperty('--color-2', s.color2 || '#00d2ff');
@@ -1061,8 +1066,11 @@
 
     ipcRenderer.on('audio-level', (_e, lvl) => {
       if (!lvl) return;
+      const react = Number.isFinite(Number(currentSettings.reactivity))
+        ? Math.max(0.1, Math.min(3.0, Number(currentSettings.reactivity)))
+        : 1.0;
       const energy = (Number(lvl.level) || 0) * 0.5 + (Number(lvl.bass) || 0) * 0.5;
-      audioAuraTarget = lvl.active ? Math.min(1, energy) : 0.08;
+      audioAuraTarget = lvl.active ? Math.min(1, energy * react) : 0.08;
       scheduleLoop();
     });
 

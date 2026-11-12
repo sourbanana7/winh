@@ -270,6 +270,8 @@ void main() {
         glow: 40,
         cornerRadius: 16,
         opacity: 0.85,
+        rotationSpeed: 1.0,
+        reactivity: 1.0,
         colors: [
           ColorUtils.hexToRgb('#7000ff'),
           ColorUtils.hexToRgb('#00d2ff'),
@@ -284,6 +286,8 @@ void main() {
         glow: 40,
         cornerRadius: 16,
         opacity: 0.85,
+        rotationSpeed: 1.0,
+        reactivity: 1.0,
         colors: this.target.colors.map((c) => ({ ...c }))
       };
 
@@ -417,6 +421,8 @@ void main() {
       if (typeof settings.glow === 'number') this.target.glow = ColorUtils.clamp(settings.glow, 4, 140);
       if (typeof settings.cornerRadius === 'number') this.target.cornerRadius = ColorUtils.clamp(settings.cornerRadius, 0, 80);
       if (typeof settings.opacity === 'number') this.target.opacity = ColorUtils.clamp(settings.opacity, 0.05, 1.0);
+      if (typeof settings.rotationSpeed === 'number') this.target.rotationSpeed = ColorUtils.clamp(settings.rotationSpeed, 0.1, 4.0);
+      if (typeof settings.reactivity === 'number') this.target.reactivity = ColorUtils.clamp(settings.reactivity, 0.1, 3.0);
 
       const keys = ['color1', 'color2', 'color3', 'color4'];
       keys.forEach((key, idx) => {
@@ -472,6 +478,8 @@ void main() {
       if (Math.abs(this.live.glow - this.target.glow) > 0.08) return true;
       if (Math.abs(this.live.cornerRadius - this.target.cornerRadius) > 0.08) return true;
       if (Math.abs(this.live.opacity - this.target.opacity) > 0.003) return true;
+      if (Math.abs(this.live.rotationSpeed - this.target.rotationSpeed) > 0.005) return true;
+      if (Math.abs(this.live.reactivity - this.target.reactivity) > 0.005) return true;
       if (this.target.mode === 'Music Sync' && (this.smoothAudio.beatEnv > 0.005 || this.smoothAudio.level > 0.005)) {
         return true;
       }
@@ -513,6 +521,8 @@ void main() {
       this.live.glow = ColorUtils.lerp(this.live.glow, this.target.glow, paramK);
       this.live.cornerRadius = ColorUtils.lerp(this.live.cornerRadius, this.target.cornerRadius, paramK);
       this.live.opacity = ColorUtils.lerp(this.live.opacity, this.target.opacity, paramK);
+      this.live.rotationSpeed = ColorUtils.lerp(this.live.rotationSpeed, this.target.rotationSpeed, paramK);
+      this.live.reactivity = ColorUtils.lerp(this.live.reactivity, this.target.reactivity, paramK);
 
       for (let i = 0; i < 4; i++) {
         this.live.colors[i] = ColorUtils.lerpRgb(this.live.colors[i], this.target.colors[i], colorK);
@@ -527,53 +537,59 @@ void main() {
       if (this.smoothAudio.beatEnv < 0.002) this.smoothAudio.beatEnv = 0;
 
       const mode = this.target.mode;
-      let energy = this.smoothAudio.level * 0.55 + this.smoothAudio.bass * 0.45;
-      let effBass = this.smoothAudio.bass;
-      let effMid = this.smoothAudio.mid;
-      let effTreble = this.smoothAudio.treble;
-      let effBeat = this.smoothAudio.beatEnv;
+      const rSpeed = this.live.rotationSpeed;
+      const react = this.live.reactivity;
+      const phaseScale = 0.4 + 0.6 * rSpeed;
+
+      let energy = ColorUtils.clamp((this.smoothAudio.level * 0.55 + this.smoothAudio.bass * 0.45) * react, 0, 1.4);
+      let effBass = ColorUtils.clamp(this.smoothAudio.bass * react, 0, 1.4);
+      let effMid = ColorUtils.clamp(this.smoothAudio.mid * react, 0, 1.4);
+      let effTreble = ColorUtils.clamp(this.smoothAudio.treble * react, 0, 1.4);
+      let effBeat = ColorUtils.clamp(this.smoothAudio.beatEnv * react, 0, 1.4);
       let dynamicAlpha = 1.0;
 
       if (mode === 'Music Sync') {
         if (this.audio.active) {
-          const rotSpeed = 1.15 + energy * 1.45 + effBeat * 0.95;
+          const rotSpeed = (1.15 + energy * 1.45 + effBeat * 0.95) * rSpeed;
           this.rot = (this.rot + dt * rotSpeed) % (Math.PI * 2);
-          this.phase1 = (this.phase1 + dt * (1.2 + effBass * 2.2)) % (Math.PI * 2);
-          this.phase2 = (this.phase2 + dt * (0.9 + effMid * 1.9)) % (Math.PI * 2);
-          this.phase3 = (this.phase3 + dt * (1.5 + effTreble * 2.6)) % (Math.PI * 2);
-          dynamicAlpha = 0.68 + energy * 0.26 + effBeat * 0.20;
+          this.phase1 = (this.phase1 + dt * (1.2 + effBass * 2.2) * phaseScale) % (Math.PI * 2);
+          this.phase2 = (this.phase2 + dt * (0.9 + effMid * 1.9) * phaseScale) % (Math.PI * 2);
+          this.phase3 = (this.phase3 + dt * (1.5 + effTreble * 2.6) * phaseScale) % (Math.PI * 2);
+          const baseFloor = ColorUtils.clamp(0.82 - 0.14 * Math.min(react, 1.2), 0.62, 0.85);
+          dynamicAlpha = ColorUtils.clamp(baseFloor + energy * 0.26 + effBeat * 0.20, 0.50, 1.25);
         } else if (this.isMediaPlaying) {
-          this.time += dt;
+          this.time += dt * phaseScale;
           const wave = 0.5 + 0.5 * Math.sin(this.time * 2.0);
-          energy = 0.22 + wave * 0.14;
-          effBass = 0.25 + wave * 0.16;
-          effMid = 0.22 + wave * 0.14;
-          effTreble = 0.14 + wave * 0.10;
-          const rotSpeed = 1.15 + energy * 0.85;
+          energy = ColorUtils.clamp((0.22 + wave * 0.14) * react, 0, 1.2);
+          effBass = ColorUtils.clamp((0.25 + wave * 0.16) * react, 0, 1.2);
+          effMid = ColorUtils.clamp((0.22 + wave * 0.14) * react, 0, 1.2);
+          effTreble = ColorUtils.clamp((0.14 + wave * 0.10) * react, 0, 1.2);
+          effBeat = ColorUtils.clamp(effBeat, 0, 1.2);
+          const rotSpeed = (1.15 + energy * 0.85) * rSpeed;
           this.rot = (this.rot + dt * rotSpeed) % (Math.PI * 2);
-          this.phase1 = (this.phase1 + dt * 1.35) % (Math.PI * 2);
-          this.phase2 = (this.phase2 + dt * 1.05) % (Math.PI * 2);
-          this.phase3 = (this.phase3 + dt * 1.55) % (Math.PI * 2);
-          dynamicAlpha = 0.74 + wave * 0.18;
+          this.phase1 = (this.phase1 + dt * 1.35 * phaseScale) % (Math.PI * 2);
+          this.phase2 = (this.phase2 + dt * 1.05 * phaseScale) % (Math.PI * 2);
+          this.phase3 = (this.phase3 + dt * 1.55 * phaseScale) % (Math.PI * 2);
+          dynamicAlpha = ColorUtils.clamp(0.74 + wave * 0.18 * Math.min(react, 1.5), 0.60, 1.15);
         } else {
-          this.time += dt;
+          this.time += dt * phaseScale;
           const rest = 0.5 + 0.5 * Math.sin(this.time * 0.9);
-          energy = 0.05;
-          effBass = 0.08;
-          effMid = 0.06;
-          effTreble = 0.03;
-          this.rot = (this.rot + dt * 0.55) % (Math.PI * 2);
-          this.phase1 = (this.phase1 + dt * 0.6) % (Math.PI * 2);
-          this.phase2 = (this.phase2 + dt * 0.45) % (Math.PI * 2);
-          this.phase3 = (this.phase3 + dt * 0.75) % (Math.PI * 2);
+          energy = ColorUtils.clamp(0.05 * react, 0, 0.4);
+          effBass = ColorUtils.clamp(0.08 * react, 0, 0.4);
+          effMid = ColorUtils.clamp(0.06 * react, 0, 0.4);
+          effTreble = ColorUtils.clamp(0.03 * react, 0, 0.4);
+          this.rot = (this.rot + dt * 0.55 * rSpeed) % (Math.PI * 2);
+          this.phase1 = (this.phase1 + dt * 0.6 * phaseScale) % (Math.PI * 2);
+          this.phase2 = (this.phase2 + dt * 0.45 * phaseScale) % (Math.PI * 2);
+          this.phase3 = (this.phase3 + dt * 0.75 * phaseScale) % (Math.PI * 2);
           dynamicAlpha = 0.52 + rest * 0.12;
         }
       } else if (mode === 'Idle Glow') {
-        this.time += dt;
+        this.time += dt * phaseScale;
         const breathe = 0.5 + 0.5 * Math.sin(this.time * 1.15);
-        this.rot = (this.rot + dt * 0.65) % (Math.PI * 2);
-        this.phase2 = (this.phase2 + dt * 0.55) % (Math.PI * 2);
-        this.phase3 = (this.phase3 + dt * 0.75) % (Math.PI * 2);
+        this.rot = (this.rot + dt * 0.65 * rSpeed) % (Math.PI * 2);
+        this.phase2 = (this.phase2 + dt * 0.55 * phaseScale) % (Math.PI * 2);
+        this.phase3 = (this.phase3 + dt * 0.75 * phaseScale) % (Math.PI * 2);
         dynamicAlpha = 0.78 + breathe * 0.20;
         energy = 0;
         effBass = 0;

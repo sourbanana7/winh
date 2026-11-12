@@ -896,6 +896,27 @@
         </div>
       </div>
 
+      <!-- Dynamics & Motion -->
+      <div class="card">
+        <div class="card-title">Dynamics &amp; Motion</div>
+
+        <div class="slider-item">
+          <div class="slider-head">
+            <span class="slider-label">Rotation Speed</span>
+            <span class="slider-value" id="val-rotation-speed">1.0x</span>
+          </div>
+          <input type="range" class="winh-range" id="input-rotation-speed" min="0.2" max="3.0" step="0.1" value="1.0" />
+        </div>
+
+        <div class="slider-item">
+          <div class="slider-head">
+            <span class="slider-label">Audio Reactivity</span>
+            <span class="slider-value" id="val-reactivity">100%</span>
+          </div>
+          <input type="range" class="winh-range" id="input-reactivity" min="0.2" max="2.5" step="0.05" value="1.0" />
+        </div>
+      </div>
+
       <!-- Geometry & Light Appearance -->
       <div class="card">
         <div class="card-title">Edge Light Geometry</div>
@@ -1071,6 +1092,8 @@
       glow: 40,
       cornerRadius: 16,
       opacity: 0.85,
+      rotationSpeed: 1.0,
+      reactivity: 1.0,
       displayId: 'all',
       widgetVisible: true,
       lyricsVisible: true,
@@ -1141,10 +1164,14 @@
     const inputGlow = document.getElementById('input-glow');
     const inputCorner = document.getElementById('input-corner');
     const inputOpacity = document.getElementById('input-opacity');
+    const inputRotationSpeed = document.getElementById('input-rotation-speed');
+    const inputReactivity = document.getElementById('input-reactivity');
     const valThickness = document.getElementById('val-thickness');
     const valGlow = document.getElementById('val-glow');
     const valCorner = document.getElementById('val-corner');
     const valOpacity = document.getElementById('val-opacity');
+    const valRotationSpeed = document.getElementById('val-rotation-speed');
+    const valReactivity = document.getElementById('val-reactivity');
 
     const albumSyncBadge = document.getElementById('album-sync-badge');
     const toggleAutoColor = document.getElementById('toggle-auto-color');
@@ -1291,6 +1318,8 @@
       styleRangeFill(inputGlow);
       styleRangeFill(inputCorner);
       styleRangeFill(inputOpacity);
+      styleRangeFill(inputRotationSpeed);
+      styleRangeFill(inputReactivity);
 
       const c1 = ColorUtils.normalizeHex(settings.color1);
       const c2 = ColorUtils.normalizeHex(settings.color2);
@@ -1331,6 +1360,18 @@
         const opacityPct = Math.round((settings.opacity ?? 0.85) * 100);
         inputOpacity.value = String(opacityPct);
         valOpacity.textContent = `${opacityPct}%`;
+      }
+
+      if (activeSliderEl !== inputRotationSpeed) {
+        const rotSpeed = Number.isFinite(Number(settings.rotationSpeed)) ? Number(settings.rotationSpeed) : 1.0;
+        inputRotationSpeed.value = String(rotSpeed);
+        valRotationSpeed.textContent = `${rotSpeed.toFixed(1)}x`;
+      }
+
+      if (activeSliderEl !== inputReactivity) {
+        const reactVal = Number.isFinite(Number(settings.reactivity)) ? Number(settings.reactivity) : 1.0;
+        inputReactivity.value = String(reactVal);
+        valReactivity.textContent = `${Math.round(reactVal * 100)}%`;
       }
 
       wheel1.setHex(settings.color1);
@@ -1412,7 +1453,7 @@
       });
     });
 
-    [inputThickness, inputGlow, inputCorner, inputOpacity].forEach((slider) => {
+    [inputThickness, inputGlow, inputCorner, inputOpacity, inputRotationSpeed, inputReactivity].forEach((slider) => {
       slider.addEventListener('pointerdown', () => { activeSliderEl = slider; });
       const clearActive = () => {
         if (activeSliderEl === slider) activeSliderEl = null;
@@ -1426,6 +1467,22 @@
     window.addEventListener('pointerup', flushPendingUpdate);
     window.addEventListener('blur', flushPendingUpdate);
     window.addEventListener('beforeunload', flushPendingUpdate);
+
+    inputRotationSpeed.addEventListener('input', (e) => {
+      const val = Number(parseFloat(e.target.value).toFixed(2));
+      settings.rotationSpeed = val;
+      valRotationSpeed.textContent = `${val.toFixed(1)}x`;
+      syncVisualAccents();
+      queueThrottledUpdate({ rotationSpeed: val });
+    });
+
+    inputReactivity.addEventListener('input', (e) => {
+      const val = Number(parseFloat(e.target.value).toFixed(2));
+      settings.reactivity = val;
+      valReactivity.textContent = `${Math.round(val * 100)}%`;
+      syncVisualAccents();
+      queueThrottledUpdate({ reactivity: val });
+    });
 
     inputThickness.addEventListener('input', (e) => {
       settings.thickness = parseInt(e.target.value, 10);
