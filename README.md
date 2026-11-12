@@ -2,6 +2,17 @@
 
 Ambient screen-edge rim lighting, system audio beat sync, floating mini-player with synced lyrics, and a 3D Fullscreen Lyrics mode for Windows 10/11.
 
+## Download & Run (.exe)
+
+Download the latest Windows release from **GitHub Releases**:
+
+- **`Winh-Portable-1.0.0.exe`** — Standalone portable executable; double-click to run immediately with zero installation.
+- **`Winh-Setup-1.0.0.exe`** — Standard Windows installer with Start Menu and Desktop shortcuts.
+
+> **Windows SmartScreen note:** Because the release binaries are currently unsigned, Windows Defender SmartScreen may show *"Windows protected your PC"* on first launch. Click **More info** -> **Run anyway** to start Winh.
+
+Once running, click the **Winh** icon in your Windows system tray (near the clock) to open the control flyout.
+
 ## Features
 
 - **Orbiting Ambient Rim Bleed (`WebGL2`)**: Single-pass GPU signed-distance (`sdRoundedBox`) bezel glow that smoothly circles all four screen edges and reacts to audio frequencies without visible circular artifacts.
@@ -13,21 +24,29 @@ Ambient screen-edge rim lighting, system audio beat sync, floating mini-player w
 - **Fullscreen 3D Art Lyrics**: Apple Music / Spotify-inspired two-column fullscreen view (`src/fullscreen.html`) with blurred album backdrop, scrubbable timeline, and depth-layered scrolling lyrics.
 - **Windows Tray Flyout**: Lives in the Windows system tray (`src/settings.html`) and auto-dismisses when clicking outside, with dual RGB color wheels, thickness/glow/corner-radius/opacity sliders, display selector, and mode toggles.
 
-## Requirements
+## Run from Source
+
+### Requirements
 
 - Windows 10 or Windows 11 (`.NET Framework 4.x` `csc.exe` built in for WASAPI loopback compilation)
 - Node.js 18+
 
-## Getting Started
+### Commands
 
 ```bash
 npm install
 npm start
 ```
 
-Click the **Winh** icon in your Windows system tray to open the control flyout.
+### Build Windows `.exe` Locally
 
-## Verification
+```bash
+npm run dist
+```
+
+Outputs `dist/Winh-Portable-1.0.0.exe` and `dist/Winh-Setup-1.0.0.exe`.
+
+### Verification
 
 ```bash
 npm run check

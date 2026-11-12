@@ -42,28 +42,30 @@ function parseHexRgb(hex, fallback) {
   return fallback;
 }
 
-function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = true) {
-  const size = 32;
-  const stride = size * 4 + 1;
-  const raw = Buffer.alloc(stride * size);
+function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = true, size = 32) {
+  const dim = Math.max(16, Math.min(512, Math.round(size)));
+  const stride = dim * 4 + 1;
+  const raw = Buffer.alloc(stride * dim);
 
   const c1 = enabled ? parseHexRgb(color1, [112, 0, 255]) : [130, 130, 145];
   const c2 = enabled ? parseHexRgb(color2, [0, 210, 255]) : [95, 95, 110];
 
-  const cx = (size - 1) / 2;
-  const cy = (size - 1) / 2;
-  const outerR = 13.5;
-  const ringMidR = 9.2;
-  const ringHalfW = 2.6;
+  const scale = dim / 32;
+  const cx = (dim - 1) / 2;
+  const cy = (dim - 1) / 2;
+  const outerR = 13.5 * scale;
+  const ringMidR = 9.2 * scale;
+  const ringHalfW = 2.6 * scale;
+  const aaFeather = Math.max(0.8, 1.4 * scale);
 
-  for (let y = 0; y < size; y++) {
+  for (let y = 0; y < dim; y++) {
     const rowStart = y * stride;
     raw[rowStart] = 0; // filter type 0
-    for (let x = 0; x < size; x++) {
+    for (let x = 0; x < dim; x++) {
       const dx = x - cx;
       const dy = y - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const t = Math.max(0, Math.min(1, (x + y) / (2 * (size - 1))));
+      const t = Math.max(0, Math.min(1, (x + y) / (2 * (dim - 1))));
 
       const rCol = Math.round(c1[0] * (1 - t) + c2[0] * t);
       const gCol = Math.round(c1[1] * (1 - t) + c2[1] * t);
@@ -75,11 +77,11 @@ function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = t
       let a = 0;
 
       // Soft outer glow halo + crisp dark disc backing + neon ring
-      if (dist <= outerR + 1.5) {
-        const discAlpha = Math.max(0, Math.min(1, outerR + 0.5 - dist));
+      if (dist <= outerR + 1.5 * scale) {
+        const discAlpha = Math.max(0, Math.min(1, (outerR + 0.5 * scale - dist) / Math.max(1, scale * 0.7)));
         const ringDist = Math.abs(dist - ringMidR);
-        const ringAlpha = Math.max(0, Math.min(1, (ringHalfW + 0.8 - ringDist) / 1.4));
-        const glowAlpha = Math.exp(-Math.pow(ringDist / 4.2, 2)) * 0.55;
+        const ringAlpha = Math.max(0, Math.min(1, (ringHalfW + 0.8 * scale - ringDist) / aaFeather));
+        const glowAlpha = Math.exp(-Math.pow(ringDist / (4.2 * scale), 2)) * 0.55;
 
         const baseR = 14;
         const baseG = 14;
@@ -98,7 +100,7 @@ function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = t
           b = Math.min(255, Math.round(b + (255 - b) * core));
         }
 
-        const totalAlpha = Math.max(discAlpha * 0.92, glowAlpha * (dist <= outerR + 1.5 ? 1 : 0));
+        const totalAlpha = Math.max(discAlpha * 0.94, glowAlpha * (dist <= outerR + 1.5 * scale ? 1 : 0));
         a = Math.round(Math.max(0, Math.min(1, totalAlpha)) * 255);
       }
 
@@ -111,8 +113,8 @@ function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = t
   }
 
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
+  ihdr.writeUInt32BE(dim, 0);
+  ihdr.writeUInt32BE(dim, 4);
   ihdr[8] = 8; // bit depth
   ihdr[9] = 6; // RGBA
   ihdr[10] = 0;

@@ -6,7 +6,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging",
-    "check": "node --check index.js && node --check src/smtc.js && node --check src/lyrics.js && node --check src/backend/audioMeter.js && node --check src/backend/artworkLookup.js && node --check src/backend/colorExtractor.js && node --check src/backend/settingsStore.js && node --check src/backend/trayIcon.js"
+    "dist": "electron-builder --win",
+    "check": "node --check index.js && node --check src/smtc.js && node --check src/lyrics.js && node --check src/backend/audioMeter.js && node --check src/backend/artworkLookup.js && node --check src/backend/colorExtractor.js && node --check src/backend/paths.js && node --check src/backend/settingsStore.js && node --check src/backend/trayIcon.js"
   },
   "keywords": [
     "winh",
@@ -18,15 +19,58 @@
     "smtc",
     "wasapi"
   ],
-  "author": "",
+  "author": "Affan09",
   "license": "ISC",
   "type": "commonjs",
-  "devDependencies": {
-    "electron": "^45.3.0"
+  "build": {
+    "appId": "com.winh.app",
+    "productName": "Winh",
+    "asar": true,
+    "asarUnpack": [
+      "smtc_watcher.ps1",
+      "src/backend/WasapiAudioMeter.cs"
+    ],
+    "files": [
+      "index.js",
+      "package.json",
+      "smtc_watcher.ps1",
+      "src/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Winh",
+      "artifactName": "Winh-Setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "Winh-Portable-${version}.exe"
+    }
   },
-  "dependencies": {
-    "colorthief": "^3.5.0",
-    "node-fetch": "^3.3.2",
-    "ws": "^8.22.2"
+  "devDependencies": {
+    "electron": "^45.3.0",
+    "electron-builder": "^26.18.0"
   }
 }

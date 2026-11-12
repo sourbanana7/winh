@@ -3,6 +3,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const EventEmitter = require('events');
 const { extractTrackAndArtist } = require('./lyrics');
+const { resolveUnpackedPath } = require('./backend/paths');
 
 const YOUTUBE_MUSIC_PWA_IDS = ['cinhimbnkkaeohfgghhklpknlkffjgod'];
 
@@ -92,7 +93,7 @@ class SmtcService extends EventEmitter {
     }
     if (this.process) return;
 
-    const scriptPath = path.join(__dirname, '..', 'smtc_watcher.ps1');
+    const scriptPath = resolveUnpackedPath(path.join(__dirname, '..', 'smtc_watcher.ps1'));
     const proc = spawn('powershell.exe', [
       '-ExecutionPolicy', 'Bypass',
       '-NoProfile',

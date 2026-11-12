@@ -5,6 +5,7 @@ const EventEmitter = require('events');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { resolveUnpackedPath } = require('./paths');
 
 const ZERO_LEVEL = {
   level: 0,
@@ -100,7 +101,7 @@ class AudioMeterService extends EventEmitter {
     }
     if (this.process) return true;
 
-    const csPath = path.join(__dirname, 'WasapiAudioMeter.cs');
+    const csPath = resolveUnpackedPath(path.join(__dirname, 'WasapiAudioMeter.cs'));
     const compiled = await compileHelper(csPath, this.cacheDir);
     if (this.isStopped) return false;
 
