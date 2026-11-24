@@ -624,10 +624,11 @@
   <div class="backdrop-audio-aura" id="backdrop-aura"></div>
 
   <div class="top-bar" id="top-bar">
-    <button class="exit-btn" id="btn-exit">
+    <button class="exit-btn" id="btn-exit" title="Exit Fullscreen (Esc or Shift+F11)">
       <svg viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
       <span>Exit Fullscreen</span>
       <span class="esc-kbd">ESC</span>
+      <span class="esc-kbd">SHIFT+F11</span>
     </button>
   </div>
 
@@ -786,6 +787,10 @@
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         exitFullscreen();
+      } else if ((e.key === 'F11' || e.code === 'F11') && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (e.repeat) return;
+        e.preventDefault();
+        ipcRenderer.send('fullscreen-hotkey');
       } else if (e.code === 'Space' && !e.target.closest('button')) {
         e.preventDefault();
         ipcRenderer.send('media-control', 'play-pause');

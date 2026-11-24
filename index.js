@@ -1,5 +1,5 @@
 // d:/Antigravity/lumn-windows/index.js
-const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, Tray, Menu, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 
 const smtcService = require('./src/smtc');
@@ -561,6 +561,9 @@ function closeFullscreenWindow() {
   syncAudioMeterActivity();
 }
 
+const FULLSCREEN_HOTKEY = 'Shift+F11';
+let lastFullscreenHotkeyMs = 0;
+
 function toggleFullscreenLyrics(desiredState) {
   const currentOpen = Boolean(
     settingsStore.get().fullscreenLyrics &&
@@ -576,6 +579,39 @@ function toggleFullscreenLyrics(desiredState) {
     closeFullscreenWindow();
   }
   return nextOpen;
+}
+
+function triggerFullscreenHotkey() {
+  const now = Date.now();
+  if (now - lastFullscreenHotkeyMs < 250) {
+    return null;
+  }
+  lastFullscreenHotkeyMs = now;
+  return toggleFullscreenLyrics();
+}
+
+function registerGlobalHotkeys() {
+  try {
+    if (globalShortcut.isRegistered(FULLSCREEN_HOTKEY)) {
+      globalShortcut.unregister(FULLSCREEN_HOTKEY);
+    }
+    const ok = globalShortcut.register(FULLSCREEN_HOTKEY, () => {
+      triggerFullscreenHotkey();
+    });
+    if (!ok) {
+      console.warn(`[Winh Hotkey] Could not register global shortcut ${FULLSCREEN_HOTKEY} (may be in use by another app).`);
+    }
+  } catch (err) {
+    console.warn(`[Winh Hotkey] Failed to register ${FULLSCREEN_HOTKEY}:`, err && err.message ? err.message : err);
+  }
+}
+
+function unregisterGlobalHotkeys() {
+  try {
+    globalShortcut.unregisterAll();
+  } catch {
+    // ignore cleanup errors on shutdown
+  }
 }
 
 function buildTrayImage(settings) {
@@ -611,6 +647,7 @@ function refreshTray() {
       label: 'Fullscreen 3D Lyrics',
       type: 'checkbox',
       checked: Boolean(s.fullscreenLyrics),
+      accelerator: FULLSCREEN_HOTKEY,
       click: (item) => toggleFullscreenLyrics(item.checked)
     },
     {
@@ -725,6 +762,7 @@ function applySettingsPatch(patch, senderWebContents) {
 function shutdownApp() {
   if (isQuitting) return;
   isQuitting = true;
+  unregisterGlobalHotkeys();
   settingsStore.saveSync();
   smtcService.stop();
   audioMeterService.stop();
@@ -774,6 +812,10 @@ ipcMain.on('toggle-fullscreen-lyrics', (_e, arg) => {
     desired = arg.open;
   }
   toggleFullscreenLyrics(desired);
+});
+
+ipcMain.on('fullscreen-hotkey', () => {
+  triggerFullscreenHotkey();
 });
 
 ipcMain.on('set-ignore-mouse-events', (e, arg1, arg2) => {
@@ -1024,13 +1066,19 @@ if (gotSingleInstanceLock) {
     });
 
     smtcService.start();
+    registerGlobalHotkeys();
   });
 
   app.on('before-quit', () => {
     isQuitting = true;
+    unregisterGlobalHotkeys();
     settingsStore.saveSync();
     smtcService.stop();
     audioMeterService.stop();
+  });
+
+  app.on('will-quit', () => {
+    unregisterGlobalHotkeys();
   });
 
   process.on('SIGINT', shutdownApp);

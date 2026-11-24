@@ -864,14 +864,14 @@
       </div>
 
       <!-- Fullscreen 3D Art Lyrics Launcher -->
-      <button class="fullscreen-cta" id="btn-fullscreen-lyrics">
+      <button class="fullscreen-cta" id="btn-fullscreen-lyrics" title="Toggle Fullscreen 3D Lyrics (Shift+F11)">
         <div class="fs-cta-left">
           <div class="fs-cta-icon">
             <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
           </div>
           <div>
             <div class="fs-cta-title">Fullscreen 3D Lyrics</div>
-            <div class="fs-cta-sub" id="fs-cta-sub">Ambient art backdrop &amp; depth lyrics</div>
+            <div class="fs-cta-sub" id="fs-cta-sub">Ambient lyrics view • Shift+F11</div>
           </div>
         </div>
         <span class="fs-cta-pill" id="fs-cta-pill">Open</span>
@@ -1306,7 +1306,7 @@
 
       const fsActive = Boolean(settings.fullscreenLyrics);
       btnFullscreenLyrics.classList.toggle('active', fsActive);
-      fsCtaSub.textContent = fsActive ? 'Active • Click to return to desktop' : 'Ambient art backdrop & depth lyrics';
+      fsCtaSub.textContent = fsActive ? 'Active • Esc or Shift+F11 to exit' : 'Ambient lyrics view • Shift+F11';
       fsCtaPill.textContent = fsActive ? 'Close' : 'Open';
 
       albumSyncBadge.classList.toggle('visible', Boolean(settings.autoColor));
@@ -1452,6 +1452,14 @@
 
     btnFullscreenLyrics.addEventListener('click', () => {
       ipcRenderer.send('toggle-fullscreen-lyrics', !settings.fullscreenLyrics);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === 'F11' || e.code === 'F11') && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (e.repeat) return;
+        e.preventDefault();
+        ipcRenderer.send('fullscreen-hotkey');
+      }
     });
 
     btnQuit.addEventListener('click', () => {
