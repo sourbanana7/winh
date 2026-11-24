@@ -4,7 +4,7 @@ Ambient screen-edge rim lighting, system audio beat sync, floating mini-player w
 
 ## Download & Run (.exe)
 
-Download the latest Windows release (`v1.0.2`) from **[GitHub Releases](https://github.com/Affan09/winh/releases)**:
+Download the latest Windows release (`v1.0.2`) from **[GitHub Releases](https://github.com/sourbanana7/winh/releases)**:
 
 - **`Winh-Portable-1.0.2.exe`** — Standalone portable executable; double-click to run immediately with zero installation.
 - **`Winh-Setup-1.0.2.exe`** — Standard Windows installer with Start Menu and Desktop shortcuts.
