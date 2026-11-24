@@ -8,8 +8,11 @@ const audioMeterService = require('./src/backend/audioMeter');
 const { ZERO_LEVEL } = require('./src/backend/audioMeter');
 const { initArtworkCache, lookupAlbumArtwork } = require('./src/backend/artworkLookup');
 const { extractPaletteFromBase64 } = require('./src/backend/colorExtractor');
+const { computeMultiMonitorLayout } = require('./src/backend/monitorLayout');
 const settingsStore = require('./src/backend/settingsStore');
 const { createTrayPngBuffer } = require('./src/backend/trayIcon');
+
+const APP_START_EPOCH_MS = Date.now();
 
 app.setName('Winh');
 if (process.platform === 'win32') {
@@ -57,9 +60,55 @@ function getDisplayInfoList() {
       width: d.bounds.width,
       height: d.bounds.height,
       scaleFactor: d.scaleFactor || 1,
+      displayFrequency: Math.max(30, Math.round(Number(d.displayFrequency) || 60)),
       isPrimary
     };
   });
+}
+
+function getDisplayConfig(display) {
+  if (!display) return null;
+  const s = settingsStore.get();
+  const primaryId = String(screen.getPrimaryDisplay().id);
+  const id = String(display.id);
+  const isPrimary = id === primaryId;
+  const rawLabel = typeof display.label === 'string' && display.label.trim() ? display.label.trim() : '';
+
+  const activeDisplays = getTargetDisplays(s.displayId);
+  const layout = computeMultiMonitorLayout(activeDisplays);
+  const showWidget = s.displayId === 'all' ? isPrimary : true;
+
+  return {
+    id,
+    label: rawLabel || (isPrimary ? 'Primary Display' : `Display ${id}`),
+    width: display.bounds.width,
+    height: display.bounds.height,
+    scaleFactor: display.scaleFactor || 1,
+    displayFrequency: Math.max(30, Math.round(Number(display.displayFrequency) || 60)),
+    isPrimary,
+    showWidget,
+    thisBounds: {
+      x: display.bounds.x,
+      y: display.bounds.y,
+      width: display.bounds.width,
+      height: display.bounds.height
+    },
+    layout,
+    syncEpochMs: APP_START_EPOCH_MS
+  };
+}
+
+function getOptimalAudioIntervalMs() {
+  const settings = settingsStore.get();
+  const targets = getTargetDisplays(settings.displayId);
+  let maxHz = 60;
+  for (const d of targets) {
+    const hz = Math.round(Number(d.displayFrequency) || 60);
+    if (hz > maxHz) maxHz = hz;
+  }
+  if (maxHz >= 110) return 8;
+  if (maxHz >= 70) return 12;
+  return 16;
 }
 
 function getTargetDisplays(displayIdSetting) {
@@ -99,10 +148,39 @@ function buildEmptyLyricsPayload() {
   };
 }
 
-function sendInitialOverlayState(webContents) {
+function sendInitialOverlayState(webContents, targetDisplay = null) {
   if (!webContents || webContents.isDestroyed()) return;
+
+  let disp = targetDisplay;
+  if (!disp) {
+    if (fullscreenWindow && !fullscreenWindow.isDestroyed() && webContents.id === fullscreenWindow.webContents.id) {
+      disp = getFullscreenTargetDisplay();
+    } else {
+      for (const [dispId, win] of overlayWindows.entries()) {
+        if (!win.isDestroyed() && win.webContents.id === webContents.id) {
+          disp = screen.getAllDisplays().find((d) => String(d.id) === dispId) || null;
+          break;
+        }
+      }
+      if (!disp) {
+        try {
+          const win = BrowserWindow.fromWebContents(webContents);
+          if (win && !win.isDestroyed()) {
+            disp = screen.getDisplayMatching(win.getBounds());
+          }
+        } catch {}
+      }
+      if (!disp) {
+        disp = screen.getPrimaryDisplay();
+      }
+    }
+  }
+
   webContents.send('settings-updated', settingsStore.get());
   webContents.send('displays-updated', getDisplayInfoList());
+  if (disp) {
+    webContents.send('display-config', getDisplayConfig(disp));
+  }
   if (latestMedia) {
     webContents.send('media-update', latestMedia);
   }
@@ -145,7 +223,7 @@ function createOverlayForDisplay(display) {
   win.loadFile(path.join(__dirname, 'src', 'overlay.html'));
 
   win.webContents.on('did-finish-load', () => {
-    sendInitialOverlayState(win.webContents);
+    sendInitialOverlayState(win.webContents, display);
   });
 
   return win;
@@ -178,6 +256,7 @@ function syncOverlayWindows() {
       ) {
         existing.setBounds(display.bounds);
       }
+      existing.webContents.send('display-config', getDisplayConfig(display));
     } else {
       overlayWindows.set(dispId, createOverlayForDisplay(display));
     }
@@ -205,6 +284,16 @@ function broadcastDisplays() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.webContents.send('displays-updated', displays);
   }
+  for (const [dispId, win] of overlayWindows.entries()) {
+    if (!win.isDestroyed()) {
+      const match = screen.getAllDisplays().find((d) => String(d.id) === dispId);
+      if (match) {
+        win.webContents.send('display-config', getDisplayConfig(match));
+      }
+    }
+  }
+  sendToFullscreen('display-config', getDisplayConfig(getFullscreenTargetDisplay()));
+  audioMeterService.setIntervalMs(getOptimalAudioIntervalMs());
 }
 
 function syncAudioMeterActivity() {
@@ -361,6 +450,29 @@ function hideFlyoutWindow() {
   }
 }
 
+function applyFullscreenDisplay(win, display) {
+  if (!win || win.isDestroyed() || !display) return;
+  const target = display.bounds;
+  const cur = win.getBounds();
+  const sameBounds =
+    cur.x === target.x &&
+    cur.y === target.y &&
+    cur.width === target.width &&
+    cur.height === target.height;
+
+  if (win.isFullScreen() && sameBounds) {
+    return;
+  }
+
+  if (win.isFullScreen()) {
+    win.setFullScreen(false);
+  }
+  win.setBounds(target);
+  if (win.isVisible()) {
+    win.setFullScreen(true);
+  }
+}
+
 function createFullscreenWindow() {
   if (fullscreenWindow && !fullscreenWindow.isDestroyed()) {
     return fullscreenWindow;
@@ -378,12 +490,15 @@ function createFullscreenWindow() {
     frame: false,
     transparent: false,
     backgroundColor: '#07080d',
-    resizable: false,
+    resizable: true,
     movable: false,
+    maximizable: true,
     skipTaskbar: false,
     focusable: true,
     show: false,
     fullscreenable: true,
+    autoHideMenuBar: true,
+    enableLargerThanScreen: true,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -391,11 +506,15 @@ function createFullscreenWindow() {
     }
   });
 
+  win.setMenuBarVisibility(false);
   fullscreenWindow = win;
   win.loadFile(path.join(__dirname, 'src', 'fullscreen.html'));
 
   win.once('ready-to-show', () => {
     if (!win.isDestroyed()) {
+      const targetDisp = getFullscreenTargetDisplay();
+      win.setBounds(targetDisp.bounds);
+      win.setFullScreen(true);
       win.show();
       win.focus();
     }
@@ -421,10 +540,14 @@ function createFullscreenWindow() {
 
 function openFullscreenWindow() {
   hideFlyoutWindow();
+  const isNew = !fullscreenWindow || fullscreenWindow.isDestroyed();
   const win = createFullscreenWindow();
   const disp = getFullscreenTargetDisplay();
-  win.setBounds(disp.bounds);
-  if (!win.webContents.isLoading()) {
+  if (!isNew && !win.webContents.isLoading()) {
+    applyFullscreenDisplay(win, disp);
+    if (!win.isFullScreen()) {
+      win.setFullScreen(true);
+    }
     win.show();
     win.focus();
   }
@@ -563,8 +686,9 @@ function applySettingsPatch(patch, senderWebContents) {
   if (prev.displayId !== next.displayId) {
     syncOverlayWindows();
     if (fullscreenWindow && !fullscreenWindow.isDestroyed()) {
-      fullscreenWindow.setBounds(getFullscreenTargetDisplay().bounds);
+      applyFullscreenDisplay(fullscreenWindow, getFullscreenTargetDisplay());
     }
+    broadcastDisplays();
   }
 
   broadcastOverlays('settings-updated', next);
@@ -623,7 +747,7 @@ ipcMain.on('overlay-ready', (e) => {
 
 ipcMain.on('fullscreen-ready', (e) => {
   if (!e.sender.isDestroyed()) {
-    sendInitialOverlayState(e.sender);
+    sendInitialOverlayState(e.sender, getFullscreenTargetDisplay());
     e.sender.send('audio-level', audioMeterService.getLastLevel());
   }
 });
@@ -715,14 +839,14 @@ if (gotSingleInstanceLock) {
     screen.on('display-removed', () => {
       syncOverlayWindows();
       if (fullscreenWindow && !fullscreenWindow.isDestroyed()) {
-        fullscreenWindow.setBounds(getFullscreenTargetDisplay().bounds);
+        applyFullscreenDisplay(fullscreenWindow, getFullscreenTargetDisplay());
       }
       broadcastDisplays();
     });
     screen.on('display-metrics-changed', () => {
       syncOverlayWindows();
       if (fullscreenWindow && !fullscreenWindow.isDestroyed()) {
-        fullscreenWindow.setBounds(getFullscreenTargetDisplay().bounds);
+        applyFullscreenDisplay(fullscreenWindow, getFullscreenTargetDisplay());
       }
       broadcastDisplays();
     });
@@ -730,16 +854,35 @@ if (gotSingleInstanceLock) {
     createSettingsWindow();
     createTray();
 
+    let lastPhaseSyncMs = 0;
+    let sharedMusicRot = 0;
+    let lastRotTickMs = Date.now();
+
     // Start lightweight Windows WASAPI system audio level/beat capture
     audioMeterService.on('level', (lvl) => {
       const s = settingsStore.get();
       const isZero = lvl.level <= 0 && lvl.peak <= 0 && lvl.bass <= 0 && lvl.mid <= 0 && lvl.treble <= 0 && !lvl.beat;
 
       if (s.enabled && s.mode === 'Music Sync') {
+        const now = Date.now();
+        const dtSec = Math.min(0.1, Math.max(0.001, (now - lastRotTickMs) / 1000));
+        lastRotTickMs = now;
+        const rotSpeed = Number(s.rotationSpeed) || 1.0;
+        const energyRate = 0.45 + (Number(lvl.level) || 0) * 0.85;
+        sharedMusicRot = (sharedMusicRot + dtSec * energyRate * rotSpeed) % (Math.PI * 2);
+
         if (!isZero || !wasOverlayZeroSent) {
           broadcastOverlays('audio-level', lvl);
           wasOverlayZeroSent = isZero;
         }
+
+        if (overlayWindows.size > 1 && (now - lastPhaseSyncMs) >= 1000) {
+          lastPhaseSyncMs = now;
+          broadcastOverlays('phase-sync', { rot: sharedMusicRot, timestamp: now });
+          sendToFullscreen('phase-sync', { rot: sharedMusicRot, timestamp: now });
+        }
+      } else {
+        lastRotTickMs = Date.now();
       }
 
       if (fullscreenWindow && !fullscreenWindow.isDestroyed()) {
@@ -752,7 +895,7 @@ if (gotSingleInstanceLock) {
     audioMeterService.on('error-log', (msg) => {
       console.warn('[Winh Audio]', msg);
     });
-    audioMeterService.start({ cacheDir: userDataDir, intervalMs: 30 }).then(() => {
+    audioMeterService.start({ cacheDir: userDataDir, intervalMs: getOptimalAudioIntervalMs() }).then(() => {
       syncAudioMeterActivity();
     });
 

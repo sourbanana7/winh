@@ -47,6 +47,14 @@ uniform float u_bass;
 uniform float u_mid;
 uniform float u_treble;
 uniform float u_beat;
+uniform int u_isMulti;
+uniform vec2 u_thisOrigin;
+uniform vec2 u_desktopCenter;
+uniform vec2 u_desktopHalfSize;
+uniform int u_segCount;
+uniform vec4 u_segments[32];
+uniform int u_cornerCount;
+uniform vec4 u_corners[16];
 
 out vec4 fragColor;
 
@@ -116,20 +124,61 @@ void main() {
   vec2 halfSize = u_res * 0.5;
   vec2 centered = px - halfSize;
 
-  float maxRad = min(halfSize.x, halfSize.y);
-  float rad = clamp(u_radius, 0.0, maxRad);
-  float sd = sdRoundedBox(centered, halfSize, rad);
+  float cornerAA = 1.0;
+  float distIn = 0.0;
+  vec2 normDir;
 
-  // Cleanly mask outside rounded corner contour with 1px AA feather
-  if (sd > 1.0) {
-    fragColor = vec4(0.0);
-    return;
+  if (u_isMulti == 0) {
+    float maxRad = min(halfSize.x, halfSize.y);
+    float rad = clamp(u_radius, 0.0, maxRad);
+    float sd = sdRoundedBox(centered, halfSize, rad);
+
+    // Cleanly mask outside rounded corner contour with 1px AA feather
+    if (sd > 1.0) {
+      fragColor = vec4(0.0);
+      return;
+    }
+    cornerAA = 1.0 - smoothstep(-0.75, 0.75, sd);
+    distIn = max(0.0, -sd);
+    normDir = centered / max(halfSize, vec2(1.0));
+  } else {
+    vec2 p = u_thisOrigin + px / u_dpr; // Virtual desktop DIP coordinate
+    float radDip = clamp(u_radius / u_dpr, 0.0, 80.0);
+    float cornerDistDip = 1e6;
+
+    for (int i = 0; i < u_cornerCount; i++) {
+      vec4 c = u_corners[i];
+      vec2 cPos = c.xy;
+      vec2 s = c.zw;
+      vec2 delta = (p - cPos) * s;
+      if (radDip > 0.5 && delta.x >= 0.0 && delta.x <= radDip && delta.y >= 0.0 && delta.y <= radDip) {
+        vec2 arcCenter = cPos + s * radDip;
+        float dArc = length(p - arcCenter) - radDip;
+        if (dArc > 1.0 / u_dpr) {
+          fragColor = vec4(0.0);
+          return;
+        }
+        cornerAA = min(cornerAA, 1.0 - smoothstep(-0.75 / u_dpr, 0.75 / u_dpr, dArc));
+        cornerDistDip = min(cornerDistDip, max(0.0, -dArc));
+      }
+    }
+
+    float minSegDistDip = 1e6;
+    for (int i = 0; i < u_segCount; i++) {
+      vec2 a = u_segments[i].xy;
+      vec2 b = u_segments[i].zw;
+      vec2 pa = p - a;
+      vec2 ba = b - a;
+      float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
+      float d = length(pa - ba * h);
+      minSegDistDip = min(minSegDistDip, d);
+    }
+
+    distIn = min(minSegDistDip, cornerDistDip) * u_dpr;
+    normDir = (p - u_desktopCenter) / max(u_desktopHalfSize, vec2(1.0));
   }
-  float cornerAA = 1.0 - smoothstep(-0.75, 0.75, sd);
-  float distIn = max(0.0, -sd);
 
   // Aspect-normalized perimeter angle (integer harmonic multiples guarantee 0 seam)
-  vec2 normDir = centered / max(halfSize, vec2(1.0));
   float theta = (dot(normDir, normDir) > 1e-6) ? atan(normDir.y, normDir.x) : 0.0;
   // Clockwise orbital angle in top-left screen coordinates
   float orbitAngle = theta - u_rot;
@@ -280,6 +329,23 @@ void main() {
         ]
       };
 
+      this.targetHz = 60;
+      this.measuredHz = 60;
+      this.effectiveHz = 60;
+      this._frameDeltaHistory = [];
+
+      this.isMultiMonitor = false;
+      this.thisBounds = { x: 0, y: 0, width: 0, height: 0 };
+      this.desktopCenter = { x: 0, y: 0 };
+      this.desktopHalfSize = { x: 1, y: 1 };
+      this.segCount = 0;
+      this.segArray = new Float32Array(32 * 4);
+      this.cornerCount = 0;
+      this.cornerArray = new Float32Array(16 * 4);
+      this.multiMonitorSegments = [];
+      this.multiMonitorCorners = [];
+      this.syncEpochMs = 0;
+
       this.live = {
         masterAlpha: 1,
         thickness: 32,
@@ -359,7 +425,9 @@ void main() {
             'u_opacity', 'u_masterAlpha', 'u_mode', 'u_gradMode',
             'u_c1', 'u_c2', 'u_c3', 'u_c4',
             'u_rot', 'u_time', 'u_phase1', 'u_phase2', 'u_phase3',
-            'u_energy', 'u_bass', 'u_mid', 'u_treble', 'u_beat'
+            'u_energy', 'u_bass', 'u_mid', 'u_treble', 'u_beat',
+            'u_isMulti', 'u_thisOrigin', 'u_desktopCenter', 'u_desktopHalfSize',
+            'u_segCount', 'u_segments', 'u_cornerCount', 'u_corners'
           ];
           for (const name of uNames) {
             this.uniforms[name] = gl.getUniformLocation(program, name);
@@ -409,6 +477,100 @@ void main() {
 
       this._dirty = true;
       this._cleared = false;
+    }
+
+    /**
+     * Configure target monitor refresh rate (e.g. 60, 75, 120, 144, 240, 360 Hz).
+     * @param {number} hz
+     */
+    setTargetRefreshRate(hz) {
+      const num = Number(hz);
+      if (Number.isFinite(num)) {
+        this.targetHz = Math.round(ColorUtils.clamp(num, 30, 360));
+        if (this._frameDeltaHistory.length < 5) {
+          this.effectiveHz = this.targetHz;
+          this.measuredHz = this.targetHz;
+        }
+        this._dirty = true;
+      }
+    }
+
+    /**
+     * Update multi-monitor layout geometry.
+     * @param {object} layout - Layout with monitorCount, bounds, outerSegments, convexCorners
+     * @param {object} thisBounds - { x, y, width, height } in virtual desktop DIP coordinates
+     */
+    setMultiMonitorLayout(layout, thisBounds, syncEpochMs) {
+      if (typeof syncEpochMs === 'number' && syncEpochMs > 0) {
+        this.syncEpochMs = syncEpochMs;
+      }
+      if (thisBounds && typeof thisBounds.x === 'number') {
+        this.thisBounds = {
+          x: Number(thisBounds.x) || 0,
+          y: Number(thisBounds.y) || 0,
+          width: Number(thisBounds.width) || this.width,
+          height: Number(thisBounds.height) || this.height
+        };
+      }
+
+      if (!layout || !layout.monitorCount || layout.monitorCount <= 1 || !Array.isArray(layout.outerSegments) || layout.outerSegments.length === 0) {
+        if (this.isMultiMonitor) {
+          this.isMultiMonitor = false;
+          this.segCount = 0;
+          this.cornerCount = 0;
+          this.multiMonitorSegments = [];
+          this.multiMonitorCorners = [];
+          this._dirty = true;
+        }
+        return;
+      }
+
+      this.isMultiMonitor = true;
+      const b = layout.bounds || {};
+      const cx = typeof b.centerX === 'number' ? b.centerX : ((b.minX || 0) + (b.maxX || this.width)) / 2;
+      const cy = typeof b.centerY === 'number' ? b.centerY : ((b.minY || 0) + (b.maxY || this.height)) / 2;
+      const hw = typeof b.width === 'number' ? b.width / 2 : Math.max(1, ((b.maxX || this.width) - (b.minX || 0)) / 2);
+      const hh = typeof b.height === 'number' ? b.height / 2 : Math.max(1, ((b.maxY || this.height) - (b.minY || 0)) / 2);
+
+      this.desktopCenter = { x: cx, y: cy };
+      this.desktopHalfSize = { x: Math.max(1, hw), y: Math.max(1, hh) };
+
+      const segs = layout.outerSegments;
+      this.multiMonitorSegments = segs;
+      this.segCount = Math.min(32, segs.length);
+      for (let i = 0; i < this.segCount; i++) {
+        const s = segs[i];
+        this.segArray[i * 4 + 0] = Number(s.x1) || 0;
+        this.segArray[i * 4 + 1] = Number(s.y1) || 0;
+        this.segArray[i * 4 + 2] = Number(s.x2) || 0;
+        this.segArray[i * 4 + 3] = Number(s.y2) || 0;
+      }
+
+      const corners = Array.isArray(layout.convexCorners) ? layout.convexCorners : [];
+      this.multiMonitorCorners = corners;
+      this.cornerCount = Math.min(16, corners.length);
+      for (let i = 0; i < this.cornerCount; i++) {
+        const c = corners[i];
+        this.cornerArray[i * 4 + 0] = Number(c.x) || 0;
+        this.cornerArray[i * 4 + 1] = Number(c.y) || 0;
+        this.cornerArray[i * 4 + 2] = Number(c.sx) || 1;
+        this.cornerArray[i * 4 + 3] = Number(c.sy) || 1;
+      }
+
+      this._dirty = true;
+    }
+
+    /** Soft synchronization of orbital angles across multi-monitor windows. */
+    setPhaseSync(syncData) {
+      if (!syncData || typeof syncData !== 'object') return;
+      if (typeof syncData.rot === 'number' && Number.isFinite(syncData.rot)) {
+        this.rot = syncData.rot;
+      }
+      if (typeof syncData.phase1 === 'number' && Number.isFinite(syncData.phase1)) this.phase1 = syncData.phase1;
+      if (typeof syncData.phase2 === 'number' && Number.isFinite(syncData.phase2)) this.phase2 = syncData.phase2;
+      if (typeof syncData.phase3 === 'number' && Number.isFinite(syncData.phase3)) this.phase3 = syncData.phase3;
+      if (typeof syncData.time === 'number' && Number.isFinite(syncData.time)) this.time = syncData.time;
+      this._dirty = true;
     }
 
     /** Update settings and wake renderer cleanly. */
@@ -498,7 +660,28 @@ void main() {
       if (this.width <= 0 || this.height <= 0) return;
       if (this.isSettled()) return;
 
-      const dt = Math.min(0.05, Math.max(0.001, dtSec || 0.016));
+      const expectedDt = 1 / Math.max(30, Math.min(360, this.effectiveHz || this.targetHz || 60));
+      const hasValidDt = typeof dtSec === 'number' && Number.isFinite(dtSec) && dtSec >= 0.0005 && dtSec <= 0.08;
+      const rawDt = hasValidDt ? dtSec : expectedDt;
+      const dt = Math.min(0.05, Math.max(0.001, rawDt));
+
+      if (hasValidDt && dtSec >= 0.002 && dtSec <= 0.045) {
+        this._frameDeltaHistory.push(dtSec);
+        if (this._frameDeltaHistory.length > 20) {
+          this._frameDeltaHistory.shift();
+        }
+        const sorted = [...this._frameDeltaHistory].sort((a, b) => a - b);
+        const medianDt = sorted[Math.floor(sorted.length / 2)];
+        if (medianDt > 0) {
+          this.measuredHz = Math.round(1 / medianDt);
+          if (Math.abs(this.measuredHz - this.targetHz) <= 3) {
+            this.effectiveHz = this.targetHz;
+          } else {
+            this.effectiveHz = Math.round(ColorUtils.clamp(this.measuredHz, 30, 360));
+          }
+        }
+      }
+
       const colorK = 1 - Math.exp(-dt * 5.2);
       const paramK = 1 - Math.exp(-dt * 10.0);
       const audioK = 1 - Math.exp(-dt * 18.0);
@@ -666,6 +849,19 @@ void main() {
       gl.uniform1f(u.u_treble, treble);
       gl.uniform1f(u.u_beat, beat);
 
+      gl.uniform1i(u.u_isMulti, this.isMultiMonitor ? 1 : 0);
+      gl.uniform2f(u.u_thisOrigin, this.thisBounds.x, this.thisBounds.y);
+      gl.uniform2f(u.u_desktopCenter, this.desktopCenter.x, this.desktopCenter.y);
+      gl.uniform2f(u.u_desktopHalfSize, this.desktopHalfSize.x, this.desktopHalfSize.y);
+      gl.uniform1i(u.u_segCount, this.segCount);
+      if (this.segCount > 0) {
+        gl.uniform4fv(u.u_segments, this.segArray);
+      }
+      gl.uniform1i(u.u_cornerCount, this.cornerCount);
+      if (this.cornerCount > 0) {
+        gl.uniform4fv(u.u_corners, this.cornerArray);
+      }
+
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
@@ -710,10 +906,24 @@ void main() {
         ctx.fillRect(rx, ry, rw, rh);
       };
 
-      drawEdge(0, 0, 0, depth, 0, 0, W, depth, tl, tr);
-      drawEdge(0, H, 0, H - depth, 0, H - depth, W, depth, bl, br);
-      drawEdge(0, 0, depth, 0, 0, 0, depth, H, tl, bl);
-      drawEdge(W, 0, W - depth, 0, W - depth, 0, depth, H, tr, br);
+      let hasTop = true;
+      let hasBottom = true;
+      let hasLeft = true;
+      let hasRight = true;
+
+      if (this.isMultiMonitor && this.multiMonitorSegments.length > 0) {
+        const tb = this.thisBounds;
+        const eps = 4;
+        hasTop = this.multiMonitorSegments.some((s) => Math.abs(s.y1 - tb.y) <= eps && Math.abs(s.y2 - tb.y) <= eps);
+        hasBottom = this.multiMonitorSegments.some((s) => Math.abs(s.y1 - (tb.y + tb.height)) <= eps && Math.abs(s.y2 - (tb.y + tb.height)) <= eps);
+        hasLeft = this.multiMonitorSegments.some((s) => Math.abs(s.x1 - tb.x) <= eps && Math.abs(s.x2 - tb.x) <= eps);
+        hasRight = this.multiMonitorSegments.some((s) => Math.abs(s.x1 - (tb.x + tb.width)) <= eps && Math.abs(s.x2 - (tb.x + tb.width)) <= eps);
+      }
+
+      if (hasTop) drawEdge(0, 0, 0, depth, 0, 0, W, depth, tl, tr);
+      if (hasBottom) drawEdge(0, H, 0, H - depth, 0, H - depth, W, depth, bl, br);
+      if (hasLeft) drawEdge(0, 0, depth, 0, 0, 0, depth, H, tl, bl);
+      if (hasRight) drawEdge(W, 0, W - depth, 0, W - depth, 0, depth, H, tr, br);
 
       ctx.restore();
     }

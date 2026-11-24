@@ -99,6 +99,7 @@ namespace LumnAudio {
 
         private static volatile bool running = true;
         private static volatile bool paused = false;
+        private static volatile int intervalMs = 30;
 
         private class AudioSession : IDisposable {
             public string DeviceId;
@@ -260,6 +261,12 @@ namespace LumnAudio {
             return Math.Min(1.0, Math.Max(0.0, norm));
         }
 
+        private static double ExpSmoothing(double current, double target, double attackRate, double releaseRate, double dt) {
+            double rate = target > current ? attackRate : releaseRate;
+            double factor = 1.0 - Math.Exp(-rate * dt);
+            return current + (target - current) * factor;
+        }
+
         private static void EmitJson(double level, double peak, double bass, double mid, double treble, bool beat, bool active, string source) {
             var ic = CultureInfo.InvariantCulture;
             var sb = new StringBuilder(160);
@@ -286,15 +293,16 @@ namespace LumnAudio {
         public static void Main(string[] args) {
             Console.OutputEncoding = Encoding.UTF8;
             int parentPid = 0;
-            int intervalMs = 30;
 
             for (int i = 0; i < args.Length; i++) {
                 if (args[i] == "--parent-pid" && i + 1 < args.Length) {
                     int.TryParse(args[i + 1], out parentPid);
                     i++;
                 } else if (args[i] == "--interval-ms" && i + 1 < args.Length) {
-                    int.TryParse(args[i + 1], out intervalMs);
-                    intervalMs = Math.Max(16, Math.Min(200, intervalMs));
+                    int parsedInterval;
+                    if (int.TryParse(args[i + 1], out parsedInterval)) {
+                        intervalMs = Math.Max(6, Math.Min(100, parsedInterval));
+                    }
                     i++;
                 }
             }
@@ -312,6 +320,11 @@ namespace LumnAudio {
                                 paused = true;
                             } else if (cmd.Equals("RESUME", StringComparison.OrdinalIgnoreCase)) {
                                 paused = false;
+                            } else if (cmd.StartsWith("INTERVAL:", StringComparison.OrdinalIgnoreCase)) {
+                                int nextInterval;
+                                if (int.TryParse(cmd.Substring(9).Trim(), out nextInterval)) {
+                                    intervalMs = Math.Max(6, Math.Min(100, nextInterval));
+                                }
                             }
                         }
                     } catch {}
@@ -345,9 +358,18 @@ namespace LumnAudio {
             bool wasZeroEmitted = false;
             int loopCounter = 0;
 
+            var sw = Stopwatch.StartNew();
+            long lastTicks = sw.ElapsedTicks;
+
             try {
                 while (running) {
                     loopCounter++;
+
+                    long currentTicks = sw.ElapsedTicks;
+                    double dtSec = (double)(currentTicks - lastTicks) / Stopwatch.Frequency;
+                    lastTicks = currentTicks;
+                    if (dtSec < 0.001) dtSec = 0.001;
+                    if (dtSec > 0.200) dtSec = (double)intervalMs / 1000.0;
 
                     if (parentPid > 0 && (loopCounter % 50) == 0) {
                         try {
@@ -373,6 +395,7 @@ namespace LumnAudio {
                             wasZeroEmitted = true;
                         }
                         Thread.Sleep(200);
+                        lastTicks = sw.ElapsedTicks;
                         continue;
                     }
 
@@ -384,6 +407,7 @@ namespace LumnAudio {
                                 wasZeroEmitted = true;
                             }
                             Thread.Sleep(750);
+                            lastTicks = sw.ElapsedTicks;
                             continue;
                         }
                     } else if ((loopCounter % 65) == 0) {
@@ -512,11 +536,11 @@ namespace LumnAudio {
                         instTreble = instLevel * 0.5;
                     }
 
-                    smoothLevel = instLevel > smoothLevel ? (smoothLevel * 0.35 + instLevel * 0.65) : (smoothLevel * 0.80 + instLevel * 0.20);
-                    smoothPeak = instPeak > smoothPeak ? instPeak : (smoothPeak * 0.78 + instPeak * 0.22);
-                    smoothBass = instBass > smoothBass ? (smoothBass * 0.30 + instBass * 0.70) : (smoothBass * 0.78 + instBass * 0.22);
-                    smoothMid = instMid > smoothMid ? (smoothMid * 0.35 + instMid * 0.65) : (smoothMid * 0.80 + instMid * 0.20);
-                    smoothTreble = instTreble > smoothTreble ? (smoothTreble * 0.35 + instTreble * 0.65) : (smoothTreble * 0.80 + instTreble * 0.20);
+                    smoothLevel = ExpSmoothing(smoothLevel, instLevel, 35.0, 7.44, dtSec);
+                    smoothPeak = instPeak > smoothPeak ? instPeak : ExpSmoothing(smoothPeak, instPeak, 0.0, 8.28, dtSec);
+                    smoothBass = ExpSmoothing(smoothBass, instBass, 40.1, 8.28, dtSec);
+                    smoothMid = ExpSmoothing(smoothMid, instMid, 35.0, 7.44, dtSec);
+                    smoothTreble = ExpSmoothing(smoothTreble, instTreble, 35.0, 7.44, dtSec);
 
                     if (smoothLevel < 0.003) smoothLevel = 0.0;
                     if (smoothPeak < 0.003) smoothPeak = 0.0;
@@ -530,7 +554,7 @@ namespace LumnAudio {
                         beat = true;
                         lastBeatTick = nowTick;
                     }
-                    rollingBass = rollingBass * 0.92 + instBass * 0.08;
+                    rollingBass = ExpSmoothing(rollingBass, instBass, 2.78, 2.78, dtSec);
                     if (rollingBass < 0.04) rollingBass = 0.04;
 
                     bool isZero = (smoothLevel <= 0.0 && smoothPeak <= 0.0 && smoothBass <= 0.0);

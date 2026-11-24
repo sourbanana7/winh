@@ -93,7 +93,9 @@ class AudioMeterService extends EventEmitter {
   async start(options = {}) {
     this.isStopped = false;
     if (options.cacheDir) this.cacheDir = options.cacheDir;
-    if (options.intervalMs) this.intervalMs = options.intervalMs;
+    if (options.intervalMs) {
+      this.intervalMs = Math.max(6, Math.min(100, Math.round(Number(options.intervalMs) || 30)));
+    }
 
     if (this.restartTimer) {
       clearTimeout(this.restartTimer);
@@ -192,6 +194,17 @@ class AudioMeterService extends EventEmitter {
 
   getLastLevel() {
     return this.lastLevel;
+  }
+
+  setIntervalMs(ms) {
+    const val = Math.max(6, Math.min(100, Math.round(Number(ms) || 30)));
+    if (this.intervalMs === val) return;
+    this.intervalMs = val;
+    if (this.process && this.process.stdin && !this.process.stdin.destroyed && this.process.stdin.writable) {
+      try {
+        this.process.stdin.write(`INTERVAL:${val}\n`);
+      } catch {}
+    }
   }
 
   stop() {

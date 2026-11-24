@@ -1330,7 +1330,28 @@
         item.btn.classList.toggle('active', match);
       }
 
-      footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} • ${settings.gradientMode}`;
+      const isAll = String(settings.displayId || 'all') === 'all';
+      let dispLabel = '';
+      let hzVal = 60;
+      if (isAll && availableDisplays.length > 1) {
+        dispLabel = `Unified (${availableDisplays.length} Displays)`;
+        const primary = availableDisplays.find((d) => d.isPrimary) || availableDisplays[0];
+        hzVal = primary && Number.isFinite(Number(primary.displayFrequency)) && Number(primary.displayFrequency) >= 30
+          ? Math.round(primary.displayFrequency)
+          : 60;
+        footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} • ${settings.gradientMode} • Unified (${availableDisplays.length}) • ${hzVal} Hz`;
+        footerMeta.title = `Multi-monitor layout active: ${availableDisplays.length} displays forming unified perimeter glow (${hzVal} Hz)`;
+      } else {
+        const activeDisp = availableDisplays.find((d) => String(d.id) === String(settings.displayId))
+          || availableDisplays.find((d) => d.isPrimary)
+          || availableDisplays[0];
+        dispLabel = activeDisp ? (activeDisp.label || 'Display') : 'All Displays';
+        hzVal = activeDisp && Number.isFinite(Number(activeDisp.displayFrequency)) && Number(activeDisp.displayFrequency) >= 30
+          ? Math.round(activeDisp.displayFrequency)
+          : 60;
+        footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} • ${settings.gradientMode} • ${hzVal} Hz`;
+        footerMeta.title = `Display: ${dispLabel} (${hzVal} Hz)`;
+      }
     }
 
     function renderAllUI() {
@@ -1403,7 +1424,7 @@
       const allOpt = document.createElement('option');
       allOpt.value = 'all';
       allOpt.textContent = availableDisplays.length > 1
-        ? `All Displays (${availableDisplays.length})`
+        ? `All Displays (Unified Perimeter • ${availableDisplays.length})`
         : 'All Displays';
       selectDisplay.appendChild(allOpt);
 
@@ -1412,7 +1433,9 @@
         opt.value = String(disp.id);
         const primaryTag = disp.isPrimary ? ' • Primary' : '';
         const baseLabel = disp.label || `Display ${idx + 1}`;
-        opt.textContent = `${baseLabel} (${disp.width}×${disp.height}${primaryTag})`;
+        const hz = Number(disp.displayFrequency);
+        const hzTag = Number.isFinite(hz) && hz >= 30 ? ` @ ${Math.round(hz)}Hz` : '';
+        opt.textContent = `${baseLabel} (${disp.width}×${disp.height}${hzTag}${primaryTag})`;
         selectDisplay.appendChild(opt);
       });
 
@@ -1572,6 +1595,17 @@
     ipcRenderer.on('displays-updated', (_e, displays) => {
       availableDisplays = Array.isArray(displays) ? displays : [];
       renderDisplaysDropdown();
+      syncVisualAccents();
+    });
+
+    ipcRenderer.on('display-config', (_e, cfg) => {
+      if (!cfg) return;
+      if (cfg.displayFrequency && availableDisplays.length) {
+        const match = availableDisplays.find((d) => String(d.id) === String(cfg.id));
+        if (match) match.displayFrequency = cfg.displayFrequency;
+        renderDisplaysDropdown();
+        syncVisualAccents();
+      }
     });
 
     ipcRenderer.on('flyout-opened', () => {

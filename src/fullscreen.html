@@ -319,10 +319,13 @@
 
     .scrub-fill {
       height: 100%;
-      width: 0%;
+      width: 100%;
       border-radius: 999px;
       background: rgba(255, 255, 255, 0.92);
       box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+      transform-origin: left center;
+      transform: scaleX(0);
+      will-change: transform;
     }
 
     .scrub-knob {
@@ -747,13 +750,16 @@
     let manualBrowseOffset = 0;
     let isManualBrowsing = false;
 
+    let targetHz = 60;
     let audioAuraSmooth = 0;
     let audioAuraTarget = 0;
     let currentSettings = {
       rotationSpeed: 1.0,
       reactivity: 1.0
     };
-    let lastPctText = '';
+    let lastProgressRatio = -1;
+    let lastScrubKnobLeft = '';
+    let lastAuraOpacity = '';
     let lastElapsedText = '';
     let rafId = null;
 
@@ -799,11 +805,15 @@
     }
 
     function applyProgressVisual(ratio) {
-      const pctStr = `${(ratio * 100).toFixed(2)}%`;
-      if (pctStr !== lastPctText) {
-        lastPctText = pctStr;
-        scrubFill.style.width = pctStr;
-        scrubKnob.style.left = pctStr;
+      const clamped = Math.max(0, Math.min(1, ratio));
+      if (Math.abs(clamped - lastProgressRatio) >= 0.0005) {
+        lastProgressRatio = clamped;
+        scrubFill.style.transform = `scaleX(${clamped.toFixed(4)})`;
+        const knobPct = `${(clamped * 100).toFixed(2)}%`;
+        if (knobPct !== lastScrubKnobLeft) {
+          lastScrubKnobLeft = knobPct;
+          scrubKnob.style.left = knobPct;
+        }
       }
     }
 
@@ -1091,9 +1101,11 @@
         trackArtistEl.textContent = 'Play Spotify, YouTube, or browser audio';
         timeElapsedEl.textContent = '0:00';
         timeDurationEl.textContent = '0:00';
-        lastPctText = '';
+        lastProgressRatio = 0;
+        lastScrubKnobLeft = '0%';
+        scrubFill.style.transform = 'scaleX(0)';
+        scrubKnob.style.left = '0%';
         lastElapsedText = '';
-        applyProgressVisual(0);
 
         applyArtwork('');
 
@@ -1235,31 +1247,48 @@
     }
 
     // --- Lightweight Refresh-Rate-Adaptive Loop ---
-    let lastFrameMs = performance.now();
+    let lastFrameMs = null;
     function scheduleLoop() {
       if (rafId !== null) return;
-      lastFrameMs = performance.now();
+      lastFrameMs = null;
       rafId = requestAnimationFrame(loop);
     }
 
     function loop(nowMs) {
       rafId = null;
-      const dt = Math.min(0.05, Math.max(0.001, (nowMs - lastFrameMs) / 1000));
+      const dt = lastFrameMs === null
+        ? (1 / targetHz)
+        : Math.min(0.05, Math.max(0.001, (nowMs - lastFrameMs) / 1000));
       lastFrameMs = nowMs;
 
       audioAuraSmooth += (audioAuraTarget - audioAuraSmooth) * (1 - Math.exp(-dt * 12));
-      backdropAura.style.opacity = (0.16 + audioAuraSmooth * 0.55).toFixed(3);
+      const auraOpStr = (0.16 + audioAuraSmooth * 0.55).toFixed(3);
+      if (auraOpStr !== lastAuraOpacity) {
+        lastAuraOpacity = auraOpStr;
+        backdropAura.style.opacity = auraOpStr;
+      }
 
       syncPlayheadAndLyrics(Date.now());
 
       const needsMore =
         (mediaState.active && mediaState.status === 'Playing') ||
-        Math.abs(audioAuraTarget - audioAuraSmooth) > 0.01;
+        Math.abs(audioAuraTarget - audioAuraSmooth) > 0.005;
 
       if (needsMore) {
         rafId = requestAnimationFrame(loop);
+      } else {
+        lastFrameMs = null;
       }
     }
+
+    ipcRenderer.on('display-config', (_e, cfg) => {
+      if (!cfg) return;
+      const hz = Number(cfg.displayFrequency);
+      if (Number.isFinite(hz) && hz >= 30 && hz <= 360) {
+        targetHz = Math.round(hz);
+        scheduleLoop();
+      }
+    });
 
     window.addEventListener('resize', () => {
       if (lyricsState.isSynced && lyricsState.lineEls.length > 0) {

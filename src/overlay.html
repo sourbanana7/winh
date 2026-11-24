@@ -542,11 +542,13 @@
 
     .progress-fill {
       height: 100%;
-      width: 0%;
+      width: 100%;
       border-radius: 999px;
       background: linear-gradient(90deg, var(--color-1), var(--color-2));
       box-shadow: 0 0 10px color-mix(in srgb, var(--color-2) 60%, transparent);
-      transition: width 0.08s linear;
+      transform-origin: left center;
+      transform: scaleX(0);
+      will-change: transform;
     }
 
     .time-row {
@@ -912,7 +914,8 @@
       lastUpdatedMs: Date.now(),
       thumbnailKey: ''
     };
-    let lastProgressPctStr = '';
+    let targetHz = 60;
+    let lastProgressRatio = -1;
     let lastElapsedText = '';
 
     let lyricsState = {
@@ -920,6 +923,8 @@
       syncedLyrics: [],
       lastActiveIdx: -99
     };
+
+    let showWidget = true;
 
     // --- Click-through mouse forwarding state ---
     let lastIgnoreMouse = true;
@@ -938,6 +943,7 @@
 
     function isWidgetVisibleOnScreen() {
       return Boolean(
+        showWidget &&
         currentSettings.enabled &&
         currentSettings.widgetVisible &&
         !currentSettings.fullscreenLyrics &&
@@ -1217,13 +1223,14 @@
 
       rimRenderer.updateSettings(currentSettings);
 
-      const showWidget = Boolean(
+      const shouldShow = Boolean(
+        showWidget &&
         currentSettings.enabled &&
         currentSettings.widgetVisible &&
         !currentSettings.fullscreenLyrics
       );
-      widgetWrapper.classList.toggle('hidden', !showWidget);
-      if (!showWidget) {
+      widgetWrapper.classList.toggle('hidden', !shouldShow);
+      if (!shouldShow) {
         isPointerInsideWidget = false;
         setIgnoreMouse(true);
       }
@@ -1265,6 +1272,25 @@
     });
 
     ipcRenderer.on('media-update', (_e, data) => {
+      if (!showWidget) {
+        if (!data || !data.title || data.status === 'Closed') {
+          mediaState.active = false;
+          mediaState.status = 'Stopped';
+          mediaState.position = 0;
+          mediaState.duration = 0;
+          rimRenderer.setMediaPlaying(false);
+        } else {
+          mediaState.active = Boolean(data.active !== false);
+          mediaState.status = data.status || 'Unknown';
+          mediaState.position = Number(data.position) || 0;
+          mediaState.duration = Number(data.duration) || 0;
+          mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || Date.now();
+          rimRenderer.setMediaPlaying(data.status === 'Playing');
+        }
+        scheduleFrame();
+        return;
+      }
+
       if (!data || !data.title || data.status === 'Closed') {
         mediaState.active = false;
         mediaState.status = 'Stopped';
@@ -1283,7 +1309,8 @@
         trackTitleEl.textContent = 'Waiting for music...';
         trackArtistEl.textContent = 'Play Spotify, YouTube, or Edge';
         trackAlbumEl.style.display = 'none';
-        progressFill.style.width = '0%';
+        lastProgressRatio = 0;
+        progressFill.style.transform = 'scaleX(0)';
         timeElapsedEl.textContent = '0:00';
         timeDurationEl.textContent = '0:00';
         applyArtwork('');
@@ -1300,7 +1327,6 @@
         lyricNext2El.textContent = '';
         lyricsPlainView.textContent = '';
         setLyricsStatus('Play a song for live synced lyrics');
-        lastProgressPctStr = '';
         lastElapsedText = '';
         scheduleFrame();
         return;
@@ -1364,6 +1390,7 @@
     });
 
     ipcRenderer.on('lyrics-update', (_e, lyricsData) => {
+      if (!showWidget) return;
       lyricsState.lastActiveIdx = -99;
 
       if (!lyricsData) {
@@ -1422,20 +1449,17 @@
       if (mediaState.status === 'Playing') {
         estimatedPos += Math.max(0, (nowMs - mediaState.lastUpdatedMs) / 1000);
       }
+      let ratio = 0;
       if (mediaState.duration > 0) {
         estimatedPos = Math.min(mediaState.duration, Math.max(0, estimatedPos));
-        const pct = (estimatedPos / mediaState.duration) * 100;
-        const pctStr = `${pct.toFixed(1)}%`;
-        if (pctStr !== lastProgressPctStr) {
-          lastProgressPctStr = pctStr;
-          progressFill.style.width = pctStr;
-        }
+        ratio = estimatedPos / mediaState.duration;
       } else {
-        const pctStr = mediaState.status === 'Playing' ? '100%' : '0%';
-        if (pctStr !== lastProgressPctStr) {
-          lastProgressPctStr = pctStr;
-          progressFill.style.width = pctStr;
-        }
+        ratio = mediaState.status === 'Playing' ? 1 : 0;
+      }
+
+      if (Math.abs(ratio - lastProgressRatio) >= 0.0005) {
+        lastProgressRatio = ratio;
+        progressFill.style.transform = `scaleX(${ratio.toFixed(4)})`;
       }
 
       const elapsedStr = formatTime(estimatedPos);
@@ -1476,7 +1500,7 @@
 
     // --- Main Refresh-Rate-Adaptive Animation Loop ---
     let rafId = null;
-    let lastFrameMs = performance.now();
+    let lastFrameMs = null;
 
     function needsActiveLoop() {
       if (!rimRenderer.isSettled()) return true;
@@ -1491,13 +1515,15 @@
 
     function scheduleFrame() {
       if (rafId !== null) return;
-      lastFrameMs = performance.now();
+      lastFrameMs = null;
       rafId = requestAnimationFrame(frame);
     }
 
     function frame(nowMs) {
       rafId = null;
-      const dtSec = (nowMs - lastFrameMs) / 1000;
+      const dtSec = lastFrameMs === null
+        ? (1 / targetHz)
+        : Math.min(0.05, Math.max(0.001, (nowMs - lastFrameMs) / 1000));
       lastFrameMs = nowMs;
 
       rimRenderer.render(dtSec);
@@ -1505,6 +1531,8 @@
 
       if (needsActiveLoop()) {
         rafId = requestAnimationFrame(frame);
+      } else {
+        lastFrameMs = null;
       }
     }
 
@@ -1520,6 +1548,28 @@
     handleResize();
     applySettingsToUI();
     scheduleFrame();
+
+    ipcRenderer.on('display-config', (_e, cfg) => {
+      if (!cfg) return;
+      if (typeof cfg.showWidget === 'boolean') {
+        showWidget = cfg.showWidget;
+        applySettingsToUI();
+      }
+      const hz = Number(cfg.displayFrequency);
+      if (Number.isFinite(hz) && hz >= 30 && hz <= 360) {
+        targetHz = Math.round(hz);
+        rimRenderer.setTargetRefreshRate(targetHz);
+      }
+      if (cfg.layout || cfg.thisBounds) {
+        rimRenderer.setMultiMonitorLayout(cfg.layout, cfg.thisBounds, cfg.syncEpochMs);
+      }
+      scheduleFrame();
+    });
+
+    ipcRenderer.on('phase-sync', (_e, syncData) => {
+      rimRenderer.setPhaseSync(syncData);
+      scheduleFrame();
+    });
 
     // Notify main process that overlay is ready
     ipcRenderer.send('overlay-ready');
