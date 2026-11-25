@@ -2,7 +2,7 @@
 const https = require('https');
 
 const LRCLIB_HOST = 'lrclib.net';
-const USER_AGENT = 'Winh/1.0 (https://github.com/winh-app)';
+const USER_AGENT = 'Winh/1.0 (https://github.com/sourbanana7/winh)';
 const CACHE_MAX_ENTRIES = 150;
 const NOT_FOUND_TTL_MS = 10 * 60 * 1000;
 

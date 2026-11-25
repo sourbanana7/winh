@@ -32,4 +32,4 @@ All notable changes and fixes to **Winh** are documented in this file.
 
 ## [1.0.0] - 2026-11-12
 
-- Initial Windows release of **Winh** (rebranded from Lumn Windows): WebGL2 continuous bezel edge bleed, WASAPI loopback audio capture, Spotify & browser SMTC detection, automatic web album cover fallback, LRCLIB synced lyrics, Fullscreen 3D Art Lyrics mode, draggable mini-widget with minimize-to-pill, and Windows tray flyout controls.
+- Initial Windows release of **Winh** (rebranded from Lumn Windows): WebGL2 continuous bezel edge bleed, WASAPI loopback audio capture, Spotify & browser SMTC detection, automatic web album cover fallback, LRCLIB synced lyrics, Fullscreen Lyrics mode, draggable floating mini player with minimize-to-pill, and Windows tray flyout controls.

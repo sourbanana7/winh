@@ -6,7 +6,7 @@ const https = require('https');
 const path = require('path');
 const { extractTrackAndArtist, tokenSimilarity, normalizeForCompare } = require('../lyrics');
 
-const USER_AGENT = 'Winh/1.0 (https://github.com/winh-app)';
+const USER_AGENT = 'Winh/1.0 (https://github.com/sourbanana7/winh)';
 const MEMORY_CACHE_MAX = 100;
 const DISK_CACHE_MAX = 80;
 const NEGATIVE_TTL_MS = 10 * 60 * 1000;
