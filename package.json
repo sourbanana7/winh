@@ -1,7 +1,7 @@
 {
   "name": "winh",
   "version": "1.0.2",
-  "description": "Winh - Ambient edge lighting, tray flyout controls, WASAPI beat sync, and 3D fullscreen synced lyrics for Windows",
+  "description": "Winh - Ambient edge lighting, tray flyout controls, WASAPI beat sync, and fullscreen synced lyrics for Windows",
   "main": "index.js",
   "scripts": {
     "start": "electron .",

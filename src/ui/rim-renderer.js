@@ -322,10 +322,10 @@ void main() {
         rotationSpeed: 1.0,
         reactivity: 1.0,
         colors: [
-          ColorUtils.hexToRgb('#7000ff'),
-          ColorUtils.hexToRgb('#00d2ff'),
-          ColorUtils.hexToRgb('#ff007f'),
-          ColorUtils.hexToRgb('#10b981')
+          ColorUtils.hexToRgb('#4b7bec'),
+          ColorUtils.hexToRgb('#74b9ff'),
+          ColorUtils.hexToRgb('#e07a5f'),
+          ColorUtils.hexToRgb('#81b29a')
         ]
       };
 

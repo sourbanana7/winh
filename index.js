@@ -489,7 +489,7 @@ function createFullscreenWindow() {
     title: 'Winh Fullscreen Lyrics',
     frame: false,
     transparent: false,
-    backgroundColor: '#07080d',
+    backgroundColor: '#0a0b0f',
     resizable: true,
     movable: false,
     maximizable: true,
@@ -644,14 +644,14 @@ function refreshTray() {
       click: () => showFlyoutWindow()
     },
     {
-      label: 'Fullscreen 3D Lyrics',
+      label: 'Fullscreen Lyrics',
       type: 'checkbox',
       checked: Boolean(s.fullscreenLyrics),
       accelerator: FULLSCREEN_HOTKEY,
       click: (item) => toggleFullscreenLyrics(item.checked)
     },
     {
-      label: 'Toggle Mini Widget',
+      label: 'Floating Mini Player',
       type: 'checkbox',
       checked: Boolean(s.widgetVisible),
       click: (item) => {
@@ -666,7 +666,7 @@ function refreshTray() {
       }
     },
     {
-      label: 'Show Synced Lyrics',
+      label: 'Show Lyrics in Mini Player',
       type: 'checkbox',
       checked: s.lyricsVisible !== false,
       click: (item) => {
@@ -674,7 +674,7 @@ function refreshTray() {
       }
     },
     {
-      label: 'Auto-Extract Album Colors',
+      label: 'Colors from Album Art',
       type: 'checkbox',
       checked: Boolean(s.autoColor),
       click: (item) => {
@@ -682,7 +682,7 @@ function refreshTray() {
       }
     },
     {
-      label: 'Reset Widget Position',
+      label: 'Reset Mini Player Position',
       enabled: Boolean(s.widgetPosition),
       click: () => {
         applySettingsPatch({ widgetPosition: null }, null);

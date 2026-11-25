@@ -5,12 +5,12 @@
   <title>Winh Overlay</title>
   <style>
     :root {
-      --color-1: #7000ff;
-      --color-2: #00d2ff;
-      --color-3: #ff007f;
-      --color-4: #10b981;
-      --glass-bg: rgba(13, 14, 21, 0.72);
-      --glass-border: rgba(255, 255, 255, 0.14);
+      --color-1: #4b7bec;
+      --color-2: #74b9ff;
+      --color-3: #e07a5f;
+      --color-4: #81b29a;
+      --surface-bg: rgba(18, 19, 23, 0.88);
+      --surface-border: rgba(255, 255, 255, 0.11);
     }
 
     * {
@@ -26,7 +26,7 @@
       overflow: hidden;
       background: transparent !important;
       pointer-events: none;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
+      font-family: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -40,26 +40,26 @@
       z-index: 1;
     }
 
-    /* Floating Liquid-Glass Music Widget */
+    /* Floating Mini Player */
     #widget-wrapper {
       position: fixed;
       right: 40px;
       bottom: 48px;
-      width: 392px;
+      width: 376px;
       pointer-events: auto;
       z-index: 100;
       opacity: 1;
       transform: translate3d(0, 0, 0) scale(1);
       transition:
-        opacity 0.42s cubic-bezier(0.16, 1, 0.3, 1),
-        transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+        opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
       will-change: transform, opacity;
     }
 
     #widget-wrapper.hidden {
       opacity: 0;
       pointer-events: none;
-      transform: translate3d(0, 14px, 0) scale(0.96);
+      transform: translate3d(0, 10px, 0) scale(0.97);
     }
 
     #widget-wrapper.dragging {
@@ -70,201 +70,98 @@
     .glass-card {
       position: relative;
       width: 100%;
-      border-radius: 24px;
-      padding: 16px 18px 16px;
-      background:
-        radial-gradient(120% 90% at 8% 0%, color-mix(in srgb, var(--color-1) 18%, transparent), transparent 58%),
-        radial-gradient(90% 80% at 95% 100%, color-mix(in srgb, var(--color-2) 14%, transparent), transparent 62%),
-        var(--glass-bg);
-      backdrop-filter: blur(40px) saturate(195%);
-      -webkit-backdrop-filter: blur(40px) saturate(195%);
+      border-radius: 14px;
+      padding: 12px 15px 12px;
+      background: var(--surface-bg);
+      border: 1px solid var(--surface-border);
+      backdrop-filter: blur(26px) saturate(135%);
+      -webkit-backdrop-filter: blur(26px) saturate(135%);
       box-shadow:
-        0 24px 64px rgba(0, 0, 0, 0.58),
-        0 6px 20px rgba(0, 0, 0, 0.35),
-        0 0 42px color-mix(in srgb, var(--color-1) 24%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.18),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-      color: #f8fafc;
+        0 18px 44px rgba(0, 0, 0, 0.5),
+        0 2px 8px rgba(0, 0, 0, 0.28);
+      color: #f3f4f6;
       display: flex;
       flex-direction: column;
-      gap: 13px;
+      gap: 11px;
       cursor: grab;
       overflow: hidden;
-      transition: box-shadow 0.45s ease, transform 0.2s ease;
+      transition: box-shadow 0.25s ease, transform 0.16s ease, border-color 0.2s ease;
     }
 
     #widget-wrapper.dragging .glass-card {
       cursor: grabbing;
-      transform: scale(1.012);
+      transform: scale(1.008);
+      border-color: rgba(255, 255, 255, 0.18);
       box-shadow:
-        0 30px 72px rgba(0, 0, 0, 0.68),
-        0 0 54px color-mix(in srgb, var(--color-1) 34%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.26);
+        0 24px 56px rgba(0, 0, 0, 0.6),
+        0 4px 12px rgba(0, 0, 0, 0.34);
     }
 
-    /* Specular liquid-glass border ring */
-    .glass-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 24px;
-      padding: 1px;
-      background: linear-gradient(
-        142deg,
-        rgba(255, 255, 255, 0.32) 0%,
-        rgba(255, 255, 255, 0.09) 38%,
-        rgba(255, 255, 255, 0.04) 70%,
-        color-mix(in srgb, var(--color-2) 38%, rgba(255, 255, 255, 0.16)) 100%
-      );
-      -webkit-mask:
-        linear-gradient(#fff 0 0) content-box,
-        linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      pointer-events: none;
-    }
-
-    /* Subtle top specular sheen */
-    .glass-card::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 36%);
-      pointer-events: none;
-      border-radius: 24px;
-    }
-
-    /* Header row: Source App Pill + Equalizer / Hover Transport Controls */
+    /* Header row: Quiet source caption + hover controls */
     .card-top-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      min-height: 24px;
+      min-height: 20px;
       position: relative;
-      z-index: 2;
     }
 
-    .source-pill {
+    .source-label {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 3px 9px 3px 7px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.09);
-      font-size: 10.5px;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-      color: rgba(255, 255, 255, 0.78);
-      max-width: 210px;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.5);
+      max-width: 190px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .status-dot {
-      width: 6px;
-      height: 6px;
+      width: 5.5px;
+      height: 5.5px;
       border-radius: 50%;
       flex-shrink: 0;
-      background: rgba(255, 255, 255, 0.35);
-      transition: background 0.3s ease, box-shadow 0.3s ease;
+      background: rgba(255, 255, 255, 0.28);
+      transition: background 0.25s ease;
     }
 
     .status-dot.playing {
-      background: #10b981;
-      box-shadow: 0 0 8px #10b981;
-      animation: dotPulse 2s ease-in-out infinite;
+      background: #34d399;
     }
 
     .status-dot.paused {
-      background: #f59e0b;
-      box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
-    }
-
-    @keyframes dotPulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.25); opacity: 0.75; }
+      background: #fbbf24;
     }
 
     .top-right-slot {
-      position: relative;
       display: flex;
       align-items: center;
       justify-content: flex-end;
-      height: 24px;
-    }
-
-    /* Animated Equalizer Bars (shown when playing and not hovered) */
-    .eq-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 2.5px;
-      height: 13px;
-      padding: 0 4px;
-      opacity: 0;
-      transition: opacity 0.22s ease;
-      pointer-events: none;
-    }
-
-    .eq-bars.active {
-      opacity: 0.85;
-    }
-
-    .glass-card:hover .eq-bars {
-      opacity: 0;
-    }
-
-    .eq-bar {
-      width: 2.5px;
-      height: 4px;
-      border-radius: 2px;
-      background: linear-gradient(180deg, var(--color-2), var(--color-1));
-      animation: eqBounce 0.9s ease-in-out infinite;
-    }
-
-    .eq-bar:nth-child(2) { animation-delay: 0.18s; }
-    .eq-bar:nth-child(3) { animation-delay: 0.36s; }
-    .eq-bar:nth-child(4) { animation-delay: 0.12s; }
-
-    .eq-bars:not(.active) .eq-bar {
-      animation: none;
-      height: 3px;
-    }
-
-    @keyframes eqBounce {
-      0%, 100% { height: 3px; }
-      50% { height: 12px; }
+      height: 22px;
     }
 
     /* Hover Transport Controls */
     .transport-controls {
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%) scale(0.95);
       display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 4px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      gap: 2px;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.2s ease, transform 0.2s ease;
+      transition: opacity 0.18s ease;
     }
 
     .glass-card:hover .transport-controls {
       opacity: 1;
       pointer-events: auto;
-      transform: translateY(-50%) scale(1);
     }
 
     .transport-media-group {
       display: none;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
     }
 
     .transport-controls.available .transport-media-group {
@@ -274,9 +171,9 @@
     .ctrl-divider {
       display: none;
       width: 1px;
-      height: 12px;
-      background: rgba(255, 255, 255, 0.16);
-      margin: 0 2px;
+      height: 11px;
+      background: rgba(255, 255, 255, 0.14);
+      margin: 0 3px;
     }
 
     .transport-controls.available .ctrl-divider {
@@ -287,23 +184,23 @@
       width: 24px;
       height: 22px;
       border: none;
-      border-radius: 999px;
+      border-radius: 6px;
       background: transparent;
-      color: rgba(255, 255, 255, 0.78);
+      color: rgba(255, 255, 255, 0.68);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      transition: background 0.16s ease, color 0.16s ease, transform 0.12s ease;
+      transition: background 0.14s ease, color 0.14s ease, transform 0.1s ease;
     }
 
     .ctrl-btn:hover {
-      background: rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.11);
       color: #ffffff;
     }
 
     .ctrl-btn:active {
-      transform: scale(0.9);
+      transform: scale(0.92);
     }
 
     .ctrl-btn svg {
@@ -312,22 +209,17 @@
       fill: currentColor;
     }
 
-    /* Minimized Frosted Mini-Pill State */
+    /* Minimized Compact Pill State */
     #widget-wrapper.minimized {
       width: auto;
-      min-width: 176px;
-      max-width: 284px;
+      min-width: 168px;
+      max-width: 272px;
     }
 
     .glass-card.minimized {
       border-radius: 999px;
-      padding: 7px 9px 7px 12px;
+      padding: 7px 10px 7px 12px;
       gap: 0;
-    }
-
-    .glass-card.minimized::before,
-    .glass-card.minimized::after {
-      border-radius: 999px;
     }
 
     .glass-card.minimized .card-top-bar,
@@ -341,8 +233,6 @@
       display: none;
       align-items: center;
       gap: 8px;
-      position: relative;
-      z-index: 2;
       min-width: 0;
     }
 
@@ -354,33 +244,12 @@
       flex: 1;
       min-width: 0;
       font-size: 12px;
-      font-weight: 600;
-      color: #ffffff;
+      font-weight: 550;
+      color: #f3f4f6;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       letter-spacing: -0.01em;
-    }
-
-    .mini-pill-eq {
-      display: flex;
-      align-items: flex-end;
-      gap: 2px;
-      height: 11px;
-      flex-shrink: 0;
-      opacity: 0;
-      width: 0;
-      overflow: hidden;
-      transition: opacity 0.2s ease, width 0.2s ease;
-    }
-
-    .mini-pill-eq.active {
-      opacity: 0.85;
-      width: 12px;
-    }
-
-    .mini-pill-eq .eq-bar {
-      width: 2px;
     }
 
     .mini-pill-actions {
@@ -394,51 +263,31 @@
       opacity: 0;
       width: 0;
       overflow: hidden;
-      transition: opacity 0.18s ease, width 0.18s ease, background 0.16s ease, color 0.16s ease;
+      transition: opacity 0.16s ease, width 0.16s ease, background 0.14s ease, color 0.14s ease;
     }
 
     .glass-card.minimized:hover .pill-hover-btn {
       opacity: 1;
-      width: 22px;
+      width: 24px;
     }
 
     /* Track Row */
     .track-row {
       display: flex;
       align-items: center;
-      gap: 14px;
-      position: relative;
-      z-index: 2;
-    }
-
-    .artwork-wrap {
-      position: relative;
-      width: 64px;
-      height: 64px;
-      flex-shrink: 0;
-    }
-
-    .artwork-halo {
-      position: absolute;
-      inset: -5px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, var(--color-1), var(--color-2));
-      filter: blur(14px);
-      opacity: 0.48;
-      z-index: 0;
-      transition: opacity 0.4s ease, background 0.5s ease;
+      gap: 12px;
     }
 
     .artwork-container {
       position: relative;
-      z-index: 1;
-      width: 64px;
-      height: 64px;
-      border-radius: 14px;
+      width: 56px;
+      height: 56px;
+      flex-shrink: 0;
+      border-radius: 8px;
       overflow: hidden;
       background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.36);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -449,19 +298,18 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      transition: opacity 0.28s ease;
     }
 
     .artwork-fallback {
-      width: 26px;
-      height: 26px;
-      color: rgba(255, 255, 255, 0.48);
+      width: 22px;
+      height: 22px;
+      color: rgba(255, 255, 255, 0.42);
     }
 
     .meta-col {
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 2px;
       flex: 1;
       min-width: 0;
     }
@@ -474,8 +322,8 @@
     }
 
     .marquee-box.is-scrolling {
-      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 92%, transparent 100%);
-      mask-image: linear-gradient(90deg, transparent 0%, #000 5%, #000 92%, transparent 100%);
+      -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 93%, transparent 100%);
+      mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 93%, transparent 100%);
     }
 
     .marquee-track {
@@ -499,23 +347,23 @@
     }
 
     .track-title {
-      font-size: 15.5px;
-      font-weight: 650;
-      color: #ffffff;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #f9fafb;
       letter-spacing: -0.015em;
       line-height: 1.28;
     }
 
     .track-artist {
-      font-size: 12.8px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.66);
+      font-size: 12.5px;
+      font-weight: 450;
+      color: rgba(255, 255, 255, 0.64);
       line-height: 1.3;
     }
 
     .track-album {
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.42);
+      color: rgba(255, 255, 255, 0.38);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -527,14 +375,12 @@
       display: flex;
       flex-direction: column;
       gap: 5px;
-      position: relative;
-      z-index: 2;
     }
 
     .progress-bar {
       width: 100%;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.11);
+      height: 3px;
+      background: rgba(255, 255, 255, 0.12);
       border-radius: 999px;
       overflow: hidden;
       position: relative;
@@ -544,8 +390,7 @@
       height: 100%;
       width: 100%;
       border-radius: 999px;
-      background: linear-gradient(90deg, var(--color-1), var(--color-2));
-      box-shadow: 0 0 10px color-mix(in srgb, var(--color-2) 60%, transparent);
+      background: rgba(255, 255, 255, 0.88);
       transform-origin: left center;
       transform: scaleX(0);
       will-change: transform;
@@ -557,80 +402,73 @@
       justify-content: space-between;
       font-size: 10.5px;
       font-variant-numeric: tabular-nums;
-      color: rgba(255, 255, 255, 0.48);
-      letter-spacing: 0.02em;
+      color: rgba(255, 255, 255, 0.44);
     }
 
-    /* Synced Lyrics Glass Sub-card */
+    /* Seamless Divided Lyrics Region */
     .lyrics-box {
-      position: relative;
-      z-index: 2;
       width: 100%;
-      background: rgba(0, 0, 0, 0.28);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: 15px;
-      padding: 10px 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 9px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      min-height: 70px;
-      max-height: 112px;
+      gap: 3px;
+      min-height: 48px;
+      max-height: 108px;
       overflow: hidden;
-      transition: max-height 0.35s ease, opacity 0.3s ease, padding 0.35s ease, margin 0.35s ease;
+      transition: max-height 0.28s ease, min-height 0.28s ease, opacity 0.24s ease, padding 0.28s ease, margin 0.28s ease, border-color 0.24s ease;
     }
 
     .lyrics-box.collapsed {
       max-height: 0;
       min-height: 0;
       padding-top: 0;
-      padding-bottom: 0;
-      margin-top: -8px;
+      margin-top: -12px;
       opacity: 0;
-      border-color: transparent;
+      border-top-color: transparent;
       pointer-events: none;
     }
 
     .lyrics-synced-view {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
     }
 
     .lyric-line {
-      font-size: 12px;
+      font-size: 11.5px;
       line-height: 1.35;
-      color: rgba(255, 255, 255, 0.38);
+      color: rgba(255, 255, 255, 0.36);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      transition: color 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+      transition: color 0.22s ease, opacity 0.22s ease;
     }
 
     .lyric-line.prev {
-      font-size: 11.5px;
-      color: rgba(255, 255, 255, 0.32);
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.3);
     }
 
     .lyric-line.active {
-      font-size: 14px;
-      font-weight: 650;
+      font-size: 13.5px;
+      font-weight: 600;
       color: #ffffff;
       white-space: normal;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
-      text-shadow: 0 0 16px color-mix(in srgb, var(--color-1) 80%, rgba(255, 255, 255, 0.35));
       letter-spacing: -0.01em;
     }
 
     .lyric-line.next {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.52);
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.48);
     }
 
     .lyric-line.next2 {
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.24);
+      color: rgba(255, 255, 255, 0.22);
     }
 
     .lyric-line:empty {
@@ -640,12 +478,12 @@
     /* Plain Unsynced Scrollable View */
     .lyrics-plain-view {
       display: none;
-      max-height: 88px;
+      max-height: 82px;
       overflow-y: auto;
       padding-right: 4px;
-      font-size: 12px;
+      font-size: 11.5px;
       line-height: 1.5;
-      color: rgba(255, 255, 255, 0.78);
+      color: rgba(255, 255, 255, 0.74);
       white-space: pre-line;
       cursor: default;
     }
@@ -655,33 +493,24 @@
     }
 
     .lyrics-plain-view::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.2);
       border-radius: 3px;
     }
 
     .lyrics-status-view {
       display: none;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 46px;
-      font-size: 12px;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.52);
-      text-align: center;
+      justify-content: flex-start;
+      min-height: 36px;
+      font-size: 11.5px;
+      font-weight: 450;
+      color: rgba(255, 255, 255, 0.45);
+      text-align: left;
     }
 
     .lyrics-box[data-mode="synced"] .lyrics-synced-view { display: flex; }
     .lyrics-box[data-mode="plain"] .lyrics-plain-view { display: block; }
     .lyrics-box[data-mode="status"] .lyrics-status-view { display: flex; }
-
-    .shimmer-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--color-2);
-      animation: dotPulse 1.2s ease-in-out infinite;
-    }
   </style>
 </head>
 <body>
@@ -690,19 +519,12 @@
   <div id="widget-wrapper" class="hidden">
     <div class="glass-card" id="glass-card">
       <div class="card-top-bar">
-        <div class="source-pill" id="source-pill">
+        <div class="source-label" id="source-pill">
           <span class="status-dot" id="status-dot"></span>
           <span id="track-app-name">System Media</span>
         </div>
 
         <div class="top-right-slot">
-          <div class="eq-bars" id="eq-bars" aria-hidden="true">
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-          </div>
-
           <div class="transport-controls" id="transport-controls">
             <div class="transport-media-group">
               <button class="ctrl-btn" id="btn-prev" title="Previous">
@@ -717,7 +539,7 @@
               </button>
             </div>
             <span class="ctrl-divider"></span>
-            <button class="ctrl-btn" id="btn-fullscreen" title="Fullscreen 3D Lyrics (Shift+F11)">
+            <button class="ctrl-btn" id="btn-fullscreen" title="Fullscreen Lyrics (Shift+F11)">
               <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
             </button>
             <button class="ctrl-btn" id="btn-minimize" title="Minimize">
@@ -730,38 +552,30 @@
       <div class="mini-pill-bar" id="mini-pill-bar">
         <span class="status-dot" id="mini-pill-dot"></span>
         <span class="mini-pill-title" id="mini-pill-title">Winh</span>
-        <div class="mini-pill-eq" id="mini-pill-eq" aria-hidden="true">
-          <span class="eq-bar"></span>
-          <span class="eq-bar"></span>
-          <span class="eq-bar"></span>
-        </div>
         <div class="mini-pill-actions">
-          <button class="ctrl-btn pill-hover-btn" id="btn-pill-fullscreen" title="Fullscreen 3D Lyrics (Shift+F11)">
+          <button class="ctrl-btn pill-hover-btn" id="btn-pill-fullscreen" title="Fullscreen Lyrics (Shift+F11)">
             <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
           </button>
-          <button class="ctrl-btn" id="btn-restore" title="Restore Widget">
+          <button class="ctrl-btn" id="btn-restore" title="Expand">
             <svg viewBox="0 0 24 24"><path d="M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
           </button>
         </div>
       </div>
 
       <div class="track-row">
-        <div class="artwork-wrap">
-          <div class="artwork-halo" id="art-halo"></div>
-          <div class="artwork-container" id="art-container">
-            <svg class="artwork-fallback" id="art-fallback" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
-            </svg>
-            <img class="artwork-img" id="art-img" alt="" style="display:none;" />
-          </div>
+        <div class="artwork-container" id="art-container">
+          <svg class="artwork-fallback" id="art-fallback" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+          </svg>
+          <img class="artwork-img" id="art-img" alt="" style="display:none;" />
         </div>
 
         <div class="meta-col">
           <div class="marquee-box" id="title-marquee">
-            <div class="marquee-track track-title" id="track-title">Waiting for music...</div>
+            <div class="marquee-track track-title" id="track-title">No media playing</div>
           </div>
           <div class="marquee-box" id="artist-marquee">
-            <div class="marquee-track track-artist" id="track-artist">Play Spotify, YouTube, or Edge</div>
+            <div class="marquee-track track-artist" id="track-artist">Start playback to view track info</div>
           </div>
           <div class="track-album" id="track-album" style="display:none;"></div>
         </div>
@@ -786,7 +600,7 @@
         </div>
         <div class="lyrics-plain-view" id="lyrics-plain-view"></div>
         <div class="lyrics-status-view" id="lyrics-status-view">
-          <span id="lyrics-status-text">Play a song for live synced lyrics</span>
+          <span id="lyrics-status-text">Lyrics appear here when playing</span>
         </div>
       </div>
     </div>
@@ -803,7 +617,6 @@
     const widgetWrapper = document.getElementById('widget-wrapper');
     const glassCard = document.getElementById('glass-card');
     const statusDot = document.getElementById('status-dot');
-    const eqBars = document.getElementById('eq-bars');
     const transportControls = document.getElementById('transport-controls');
     const btnPrev = document.getElementById('btn-prev');
     const btnPlayPause = document.getElementById('btn-play-pause');
@@ -815,10 +628,8 @@
     const miniPillBar = document.getElementById('mini-pill-bar');
     const miniPillDot = document.getElementById('mini-pill-dot');
     const miniPillTitle = document.getElementById('mini-pill-title');
-    const miniPillEq = document.getElementById('mini-pill-eq');
     const iconPlay = document.getElementById('icon-play');
     const iconPause = document.getElementById('icon-pause');
-    const artHalo = document.getElementById('art-halo');
     const artImg = document.getElementById('art-img');
     const artFallback = document.getElementById('art-fallback');
     const titleMarquee = document.getElementById('title-marquee');
@@ -868,6 +679,7 @@
         showArt();
       }
     }
+
     const artistMarquee = document.getElementById('artist-marquee');
     const trackTitleEl = document.getElementById('track-title');
     const trackArtistEl = document.getElementById('track-artist');
@@ -888,10 +700,10 @@
       enabled: true,
       mode: 'Music Sync',
       gradientMode: '2 Colors',
-      color1: '#7000ff',
-      color2: '#00d2ff',
-      color3: '#ff007f',
-      color4: '#10b981',
+      color1: '#4b7bec',
+      color2: '#74b9ff',
+      color3: '#e07a5f',
+      color4: '#81b29a',
       thickness: 32,
       glow: 40,
       cornerRadius: 16,
@@ -1006,8 +818,8 @@
 
     // --- Widget Positioning & Dragging ---
     function clampWidgetPosition(x, y) {
-      const w = widgetWrapper.offsetWidth || 392;
-      const h = widgetWrapper.offsetHeight || 220;
+      const w = widgetWrapper.offsetWidth || 376;
+      const h = widgetWrapper.offsetHeight || 200;
       const margin = 12;
       const maxX = Math.max(margin, window.innerWidth - w - margin);
       const maxY = Math.max(margin, window.innerHeight - h - margin);
@@ -1036,7 +848,6 @@
 
     glassCard.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
-      // Do not initiate drag when clicking playback buttons or scrolling plain lyrics
       if (e.target.closest('.ctrl-btn') || e.target.closest('.lyrics-plain-view')) {
         return;
       }
@@ -1090,9 +901,7 @@
       if (glassCard.releasePointerCapture && dragState.pointerId !== undefined) {
         try {
           glassCard.releasePointerCapture(dragState.pointerId);
-        } catch (_) {
-          // ignore
-        }
+        } catch (_) {}
       }
       const didMove = dragState.moved;
       dragState = null;
@@ -1216,10 +1025,10 @@
 
     function applySettingsToUI() {
       const rootStyle = document.documentElement.style;
-      rootStyle.setProperty('--color-1', currentSettings.color1 || '#7000ff');
-      rootStyle.setProperty('--color-2', currentSettings.color2 || '#00d2ff');
-      rootStyle.setProperty('--color-3', currentSettings.color3 || '#ff007f');
-      rootStyle.setProperty('--color-4', currentSettings.color4 || '#10b981');
+      rootStyle.setProperty('--color-1', currentSettings.color1 || '#4b7bec');
+      rootStyle.setProperty('--color-2', currentSettings.color2 || '#74b9ff');
+      rootStyle.setProperty('--color-3', currentSettings.color3 || '#e07a5f');
+      rootStyle.setProperty('--color-4', currentSettings.color4 || '#81b29a');
 
       rimRenderer.updateSettings(currentSettings);
 
@@ -1237,7 +1046,6 @@
 
       lyricsBox.classList.toggle('collapsed', !currentSettings.lyricsVisible);
 
-      // Re-clamp widget position after lyrics collapse/expand or resize
       requestAnimationFrame(() => {
         if (!isDraggingWidget) {
           applyWidgetPosition(currentSettings.widgetPosition);
@@ -1245,14 +1053,9 @@
       });
     }
 
-    function setLyricsStatus(text, showShimmer = false) {
+    function setLyricsStatus(text) {
       lyricsBox.setAttribute('data-mode', 'status');
       lyricsStatusView.textContent = '';
-      if (showShimmer) {
-        const dot = document.createElement('span');
-        dot.className = 'shimmer-dot';
-        lyricsStatusView.appendChild(dot);
-      }
       const span = document.createElement('span');
       span.textContent = text;
       lyricsStatusView.appendChild(span);
@@ -1310,19 +1113,16 @@
         statusDot.className = 'status-dot';
         miniPillDot.className = 'status-dot';
         miniPillTitle.textContent = 'Winh';
-        miniPillEq.classList.remove('active');
-        eqBars.classList.remove('active');
         transportControls.classList.remove('available');
         trackAppNameEl.textContent = 'System Media';
-        trackTitleEl.textContent = 'Waiting for music...';
-        trackArtistEl.textContent = 'Play Spotify, YouTube, or Edge';
+        trackTitleEl.textContent = 'No media playing';
+        trackArtistEl.textContent = 'Start playback to view track info';
         trackAlbumEl.style.display = 'none';
         lastProgressRatio = 0;
         progressFill.style.transform = 'scaleX(0)';
         timeElapsedEl.textContent = '0:00';
         timeDurationEl.textContent = '0:00';
         applyArtwork('');
-        artHalo.style.background = 'linear-gradient(135deg, var(--color-1), var(--color-2))';
         updateMarquee(titleMarquee, trackTitleEl);
         updateMarquee(artistMarquee, trackArtistEl);
 
@@ -1334,7 +1134,7 @@
         lyricNextEl.textContent = '';
         lyricNext2El.textContent = '';
         lyricsPlainView.textContent = '';
-        setLyricsStatus('Play a song for live synced lyrics');
+        setLyricsStatus('Lyrics appear here when playing');
         lastElapsedText = '';
         scheduleFrame();
         return;
@@ -1349,8 +1149,6 @@
 
       statusDot.className = 'status-dot' + (isPlaying ? ' playing' : isPaused ? ' paused' : '');
       miniPillDot.className = statusDot.className;
-      miniPillEq.classList.toggle('active', isPlaying);
-      eqBars.classList.toggle('active', isPlaying);
       transportControls.classList.toggle('available', true);
       iconPlay.style.display = isPlaying ? 'none' : 'block';
       iconPause.style.display = isPlaying ? 'block' : 'none';
@@ -1377,7 +1175,6 @@
         trackAlbumEl.style.display = 'none';
       }
 
-      // Artwork thumbnail handling (supports thumbnailDataUrl or raw base64, including late web-imported covers)
       const artSrc = resolveArtworkSrc(data);
       const thumbKey = computeThumbKey(artSrc);
       if (thumbKey !== mediaState.thumbnailKey) {
@@ -1398,24 +1195,24 @@
       if (!showWidget) return;
       lyricsState.lastActiveIdx = -99;
 
-      if (!lyricsData) {
+      if (!lyricsData || (!lyricsData.loading && !lyricsData.instrumental && !lyricsData.success && !mediaState.active)) {
         lyricsState.isSynced = false;
         lyricsState.syncedLyrics = [];
-        setLyricsStatus('Play a song for live synced lyrics');
+        setLyricsStatus('Lyrics appear here when playing');
         return;
       }
 
       if (lyricsData.loading) {
         lyricsState.isSynced = false;
         lyricsState.syncedLyrics = [];
-        setLyricsStatus('Finding synced lyrics...', true);
+        setLyricsStatus('Searching lyrics...');
         return;
       }
 
       if (lyricsData.instrumental) {
         lyricsState.isSynced = false;
         lyricsState.syncedLyrics = [];
-        setLyricsStatus('♪ Instrumental');
+        setLyricsStatus('Instrumental');
         return;
       }
 
@@ -1424,7 +1221,7 @@
         lyricsState.syncedLyrics = lyricsData.syncedLyrics;
         lyricsBox.setAttribute('data-mode', 'synced');
         lyricPrevEl.textContent = '';
-        lyricActiveEl.textContent = '♪ • • •';
+        lyricActiveEl.textContent = '• • •';
         lyricNextEl.textContent = lyricsState.syncedLyrics[0]?.text || '';
         lyricNext2El.textContent = lyricsState.syncedLyrics[1]?.text || '';
         updatePlaybackAndLyrics(Date.now());
@@ -1443,7 +1240,7 @@
 
       lyricsState.isSynced = false;
       lyricsState.syncedLyrics = [];
-      setLyricsStatus('No lyrics found for this track');
+      setLyricsStatus('No lyrics available');
     });
 
     // --- Progress & Synced Lyrics Interpolation ---
@@ -1475,7 +1272,6 @@
 
       if (lyricsState.isSynced && lyricsState.syncedLyrics.length > 0 && currentSettings.lyricsVisible) {
         const lines = lyricsState.syncedLyrics;
-        // Slight 0.15s lookahead feels snappier with human vocal phrasing
         const syncPos = estimatedPos + 0.15;
         let activeIdx = -1;
         for (let i = 0; i < lines.length; i++) {
@@ -1490,7 +1286,7 @@
           lyricsState.lastActiveIdx = activeIdx;
           if (activeIdx < 0) {
             lyricPrevEl.textContent = '';
-            lyricActiveEl.textContent = '♪ • • •';
+            lyricActiveEl.textContent = '• • •';
             lyricNextEl.textContent = lines[0]?.text || '';
             lyricNext2El.textContent = lines[1]?.text || '';
           } else {
@@ -1576,7 +1372,6 @@
       scheduleFrame();
     });
 
-    // Notify main process that overlay is ready
     ipcRenderer.send('overlay-ready');
   </script>
 </body>

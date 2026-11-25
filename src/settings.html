@@ -2,20 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Winh Flyout</title>
+  <title>Winh</title>
   <style>
     :root {
-      --bg: rgba(14, 15, 22, 0.94);
-      --card-bg: rgba(255, 255, 255, 0.045);
-      --border: rgba(255, 255, 255, 0.09);
-      --border-strong: rgba(255, 255, 255, 0.17);
-      --accent: #7000ff;
-      --accent2: #00d2ff;
-      --text: #f8fafc;
-      --subtext: #949bb0;
-      --muted: #646c80;
-      --emerald: #10b981;
-      --amber: #f59e0b;
+      --bg: #141519;
+      --surface: #1b1d22;
+      --well: #0e0f13;
+      --hover: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.15);
+      --accent: #4b7bec;
+      --accent2: #74b9ff;
+      --text: #f3f4f6;
+      --subtext: #9ca3af;
+      --muted: #6b7280;
+      --switch-on: #e5e7eb;
+      --green: #34d399;
+      --amber: #fbbf24;
     }
 
     * {
@@ -30,7 +33,7 @@
       height: 100vh;
       overflow: hidden;
       background: transparent;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
+      font-family: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
       color: var(--text);
       -webkit-font-smoothing: antialiased;
     }
@@ -40,28 +43,30 @@
       height: 100%;
       display: flex;
       flex-direction: column;
-      border-radius: 14px;
-      background:
-        radial-gradient(110% 42% at 15% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 62%),
-        radial-gradient(90% 38% at 92% 4%, color-mix(in srgb, var(--accent2) 13%, transparent), transparent 60%),
-        var(--bg);
-      backdrop-filter: blur(36px) saturate(185%);
-      -webkit-backdrop-filter: blur(36px) saturate(185%);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      background: rgba(20, 21, 25, 0.96);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow:
-        0 20px 52px rgba(0, 0, 0, 0.68),
-        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        0 18px 48px rgba(0, 0, 0, 0.58),
+        0 2px 8px rgba(0, 0, 0, 0.32);
       overflow: hidden;
     }
 
+    .flyout-shell.is-hydrating *,
+    .flyout-shell.is-hydrating *::before {
+      transition: none !important;
+    }
+
     .flyout-shell.animate-in {
-      animation: flyoutPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: flyoutPopIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     @keyframes flyoutPopIn {
       0% {
-        opacity: 0.6;
-        transform: translate3d(0, 10px, 0) scale(0.985);
+        opacity: 0.7;
+        transform: translate3d(0, 6px, 0) scale(0.99);
       }
       100% {
         opacity: 1;
@@ -69,111 +74,84 @@
       }
     }
 
-    /* Compact Flyout Header (non-draggable, auto-dismisses on blur) */
+    /* Header */
     .flyout-header {
-      height: 46px;
+      height: 42px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 13px 0 14px;
+      padding: 0 14px;
       border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.02);
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 8px;
     }
 
-    .logo-orb {
-      width: 13px;
-      height: 13px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      box-shadow: 0 0 12px var(--accent), 0 0 5px var(--accent2);
-      transition: background 0.35s ease, box-shadow 0.35s ease, opacity 0.3s ease;
+    .brand-mark {
+      width: 17px;
+      height: 17px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      opacity: 0.9;
     }
 
-    .logo-orb.paused {
-      opacity: 0.45;
-      box-shadow: none;
+    .brand-mark svg {
+      width: 17px;
+      height: 17px;
     }
 
     .brand-name {
-      font-size: 14.5px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 9.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      font-weight: 700;
-      padding: 2.5px 7.5px;
-      border-radius: 999px;
-      background: rgba(16, 185, 129, 0.14);
-      color: var(--emerald);
-      border: 1px solid rgba(16, 185, 129, 0.32);
-      transition: all 0.25s ease;
-    }
-
-    .status-badge::before {
-      content: "";
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: currentColor;
-      box-shadow: 0 0 6px currentColor;
-    }
-
-    .status-badge.paused {
-      background: rgba(245, 158, 11, 0.12);
-      color: var(--amber);
-      border-color: rgba(245, 158, 11, 0.28);
+      font-size: 13.5px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      color: var(--text);
     }
 
     .power-btn {
-      height: 27px;
-      padding: 0 10px;
-      border-radius: 8px;
+      height: 26px;
+      padding: 0 9px;
+      border-radius: 7px;
       border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.04);
       color: var(--subtext);
-      font-size: 11px;
-      font-weight: 600;
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 550;
       display: inline-flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       cursor: pointer;
-      transition: all 0.18s ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
 
     .power-btn:hover {
-      background: rgba(255, 255, 255, 0.11);
-      color: #ffffff;
+      background: rgba(255, 255, 255, 0.09);
+      color: var(--text);
       border-color: var(--border-strong);
     }
 
+    .power-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background 0.2s ease;
+    }
+
     .power-btn.power-on {
-      color: var(--emerald);
-      border-color: rgba(16, 185, 129, 0.28);
-      background: rgba(16, 185, 129, 0.1);
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.12);
     }
 
-    .power-btn.power-on:hover {
-      background: rgba(16, 185, 129, 0.18);
-    }
-
-    .power-btn svg {
-      width: 12px;
-      height: 12px;
-      fill: currentColor;
+    .power-btn.power-on .power-dot {
+      background: var(--green);
     }
 
     /* Scrollable Body */
@@ -181,10 +159,10 @@
       flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
-      padding: 11px 12px;
+      padding: 8px 14px 10px;
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 0;
     }
 
     .content::-webkit-scrollbar {
@@ -196,23 +174,24 @@
     }
 
     .content::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.14);
       border-radius: 999px;
     }
 
     .content::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.26);
+      background: rgba(255, 255, 255, 0.25);
     }
 
-    /* Mini Now-Playing Strip */
+    /* Compact Now Playing Strip */
     .now-playing-strip {
       display: none;
       align-items: center;
       gap: 9px;
-      padding: 7.5px 10px;
-      border-radius: 11px;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 14%, rgba(255, 255, 255, 0.04)), rgba(255, 255, 255, 0.03));
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 9px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.035);
+      border: 1px solid var(--border);
     }
 
     .now-playing-strip.visible {
@@ -220,11 +199,11 @@
     }
 
     .mini-art {
-      width: 30px;
-      height: 30px;
-      border-radius: 7px;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      width: 28px;
+      height: 28px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       overflow: hidden;
       flex-shrink: 0;
       display: flex;
@@ -245,15 +224,16 @@
     }
 
     .mini-title {
-      font-size: 11.5px;
-      font-weight: 600;
+      font-size: 12px;
+      font-weight: 550;
+      color: var(--text);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .mini-sub {
-      font-size: 10px;
+      font-size: 10.5px;
       color: var(--subtext);
       white-space: nowrap;
       overflow: hidden;
@@ -261,257 +241,254 @@
     }
 
     .mini-tag {
-      font-size: 9px;
-      font-weight: 650;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      padding: 2px 6.5px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      color: rgba(255, 255, 255, 0.78);
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--muted);
       flex-shrink: 0;
     }
 
-    /* Prominent Fullscreen 3D Lyrics Button */
+    /* Clean Fullscreen Action Row */
     .fullscreen-cta {
       width: 100%;
+      height: 31px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      border: 1px solid color-mix(in srgb, var(--accent2) 32%, rgba(255, 255, 255, 0.12));
-      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, rgba(255, 255, 255, 0.05)), color-mix(in srgb, var(--accent2) 15%, rgba(255, 255, 255, 0.03)));
-      color: #ffffff;
+      gap: 8px;
+      padding: 0 10px;
+      margin-bottom: 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--text);
+      font-family: inherit;
       cursor: pointer;
       text-align: left;
-      transition: all 0.2s ease;
+      transition: background 0.15s ease, border-color 0.15s ease;
     }
 
     .fullscreen-cta:hover {
-      border-color: color-mix(in srgb, var(--accent2) 60%, white);
-      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 32%, rgba(255, 255, 255, 0.08)), color-mix(in srgb, var(--accent2) 22%, rgba(255, 255, 255, 0.05)));
-      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.085);
+      border-color: var(--border-strong);
     }
 
     .fullscreen-cta.active {
-      border-color: rgba(16, 185, 129, 0.5);
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), color-mix(in srgb, var(--accent2) 16%, rgba(255, 255, 255, 0.04)));
+      background: rgba(255, 255, 255, 0.11);
+      border-color: rgba(255, 255, 255, 0.22);
     }
 
     .fs-cta-left {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       min-width: 0;
     }
 
-    .fs-cta-icon {
-      width: 30px;
-      height: 30px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .fs-cta-icon svg {
-      width: 15px;
-      height: 15px;
+    .fs-cta-left svg {
+      width: 14px;
+      height: 14px;
       fill: currentColor;
+      opacity: 0.78;
+      flex-shrink: 0;
     }
 
     .fs-cta-title {
-      font-size: 12.5px;
-      font-weight: 650;
-      color: #ffffff;
+      font-size: 12px;
+      font-weight: 550;
+      color: var(--text);
     }
 
-    .fs-cta-sub {
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.68);
-      margin-top: 1px;
-    }
-
-    .fs-cta-pill {
-      font-size: 10px;
-      font-weight: 700;
-      padding: 3.5px 9px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
-      color: #ffffff;
+    .fs-cta-shortcut {
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--muted);
       flex-shrink: 0;
     }
 
-    .fullscreen-cta.active .fs-cta-pill {
-      background: rgba(16, 185, 129, 0.24);
-      color: #6ee7b7;
+    .fullscreen-cta.active .fs-cta-shortcut {
+      color: var(--green);
     }
 
-    /* Section Card */
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 11px;
+    /* Flat Divided Sections */
+    .section {
+      padding: 7.5px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.065);
       display: flex;
       flex-direction: column;
-      gap: 9px;
+      gap: 6.5px;
     }
 
-    .card-header {
+    .section.first {
+      padding-top: 2px;
+      border-top: none;
+    }
+
+    .section-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
     }
 
-    .card-title {
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--subtext);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .subtle-badge {
-      font-size: 9.5px;
+    .section-title {
+      font-size: 11.5px;
       font-weight: 600;
-      color: var(--accent2);
-      background: color-mix(in srgb, var(--accent2) 12%, transparent);
-      border: 1px solid color-mix(in srgb, var(--accent2) 28%, transparent);
-      padding: 2px 6.5px;
-      border-radius: 999px;
-      display: none;
+      color: var(--subtext);
     }
 
-    .subtle-badge.visible {
-      display: inline-block;
-    }
-
-    /* Segmented Pills & Mode Chips */
+    /* Segmented Controls */
     .segmented {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      padding: 3px;
-      border-radius: 9px;
-      background: rgba(0, 0, 0, 0.34);
-      border: 1px solid var(--border);
+      gap: 2px;
+      padding: 2px;
+      border-radius: 8px;
+      background: var(--well);
+      border: 1px solid rgba(255, 255, 255, 0.06);
     }
 
     .seg-btn {
-      border: none;
-      border-radius: 6.5px;
+      border: 1px solid transparent;
+      border-radius: 6px;
       background: transparent;
       color: var(--subtext);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 6px 5px;
+      font-family: inherit;
+      font-size: 11.5px;
+      font-weight: 550;
+      padding: 5.5px 4px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
 
     .seg-btn:hover {
-      color: #ffffff;
+      color: var(--text);
     }
 
     .seg-btn.active {
-      color: #ffffff;
-      background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, rgba(255, 255, 255, 0.12)), color-mix(in srgb, var(--accent2) 40%, rgba(255, 255, 255, 0.08)));
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      color: var(--text);
+      background: #25272e;
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
-    .chips-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
+    /* Compact 2-Column Slider Grids */
+    .slider-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 14px;
     }
 
-    .chip-btn {
-      padding: 5px 8.5px;
-      border-radius: 7.5px;
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--subtext);
-      font-size: 10.5px;
-      font-weight: 600;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      transition: all 0.18s ease;
-    }
-
-    .chip-btn:hover {
-      background: rgba(255, 255, 255, 0.09);
-      color: #ffffff;
-    }
-
-    .chip-btn.active {
-      color: #ffffff;
-      border-color: color-mix(in srgb, var(--accent2) 65%, white);
-      background: color-mix(in srgb, var(--accent2) 14%, rgba(255, 255, 255, 0.05));
-    }
-
-    /* Sliders */
     .slider-item {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
     }
 
     .slider-head {
       display: flex;
-      align-items: center;
+      align-items: baseline;
       justify-content: space-between;
+      gap: 6px;
     }
 
     .slider-label {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 500;
-      color: rgba(255, 255, 255, 0.92);
+      color: rgba(243, 244, 246, 0.88);
     }
 
     .slider-value {
-      font-size: 10.5px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 500;
       font-variant-numeric: tabular-nums;
       color: var(--subtext);
-      background: rgba(255, 255, 255, 0.06);
-      padding: 1.5px 6px;
-      border-radius: 5px;
-      border: 1px solid var(--border);
     }
 
     input[type="range"].winh-range {
       -webkit-appearance: none;
       width: 100%;
-      height: 5px;
+      height: 3.5px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.13);
       outline: none;
       cursor: pointer;
     }
 
     input[type="range"].winh-range::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 13px;
-      height: 13px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      background: #ffffff;
-      border: 2px solid rgba(15, 16, 24, 0.6);
-      box-shadow: 0 0 8px rgba(0, 0, 0, 0.65);
+      background: #f3f4f6;
+      border: 1px solid rgba(0, 0, 0, 0.35);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
       cursor: pointer;
-      transition: transform 0.15s ease;
+      transition: transform 0.12s ease;
     }
 
     input[type="range"].winh-range::-webkit-slider-thumb:hover {
-      transform: scale(1.15);
+      transform: scale(1.14);
+      background: #ffffff;
+    }
+
+    /* Gradient Style Bar */
+    .chips-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .blend-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+      padding: 2px;
+      border-radius: 8px;
+      background: var(--well);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .blend-strip .chip-btn {
+      justify-content: center;
+      padding: 5px 3px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      font-size: 10.5px;
+      font-weight: 550;
+      white-space: nowrap;
+    }
+
+    .blend-strip .chip-btn.active {
+      background: #25272e;
+      border-color: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .chip-btn {
+      padding: 4.5px 8px;
+      border-radius: 6.5px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--subtext);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .chip-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .chip-btn.active {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(255, 255, 255, 0.1);
     }
 
     /* Control Rows & Switches */
@@ -520,30 +497,32 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-    }
-
-    .label-group {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
+      min-height: 24px;
     }
 
     .label-main {
       font-size: 12px;
-      font-weight: 550;
-      color: #ffffff;
+      font-weight: 500;
+      color: rgba(243, 244, 246, 0.92);
     }
 
-    .label-sub {
-      font-size: 10px;
+    .inline-switch-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+    }
+
+    .inline-switch-label {
+      font-size: 11px;
       color: var(--subtext);
     }
 
     .switch {
       position: relative;
       display: inline-block;
-      width: 38px;
-      height: 21px;
+      width: 34px;
+      height: 18px;
       flex-shrink: 0;
     }
 
@@ -557,32 +536,32 @@
       position: absolute;
       inset: 0;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #272930;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       cursor: pointer;
-      transition: all 0.25s ease;
+      transition: background 0.18s ease, border-color 0.18s ease;
     }
 
     .switch-slider::before {
       content: "";
       position: absolute;
-      width: 15px;
-      height: 15px;
+      width: 12px;
+      height: 12px;
       left: 2px;
       top: 2px;
       border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
-      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      background: #9ca3af;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease;
     }
 
     .switch input:checked + .switch-slider {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      background: var(--switch-on);
       border-color: transparent;
     }
 
     .switch input:checked + .switch-slider::before {
-      transform: translateX(17px);
+      transform: translateX(16px);
+      background: #141519;
     }
 
     /* Dual Interactive Color Wheels */
@@ -593,14 +572,20 @@
     }
 
     .wheel-bay {
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 8px 9px;
+      background: var(--well);
+      border: 1px solid rgba(255, 255, 255, 0.065);
+      border-radius: 8px;
+      padding: 6px 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 7px;
+      gap: 6px;
+      transition: opacity 0.16s ease;
+    }
+
+    .wheel-bay.inactive-slot,
+    .mini-color-pill.inactive-slot {
+      opacity: 0.45;
     }
 
     .wheel-bay-head {
@@ -608,16 +593,16 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      font-size: 10.5px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.85);
+      font-size: 11px;
+      font-weight: 550;
+      color: var(--subtext);
     }
 
     .wheel-swatch-dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      border: 1px solid rgba(255, 255, 255, 0.24);
     }
 
     .wheel-canvas {
@@ -635,42 +620,42 @@
     .brightness-slider {
       -webkit-appearance: none;
       width: 100%;
-      height: 6px;
+      height: 5px;
       border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.12);
       outline: none;
       cursor: pointer;
     }
 
     .brightness-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       border-radius: 50%;
       background: #ffffff;
-      border: 1.5px solid rgba(0, 0, 0, 0.6);
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      border: 1.5px solid rgba(0, 0, 0, 0.55);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
       cursor: pointer;
     }
 
     .hex-input {
       width: 100%;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 5px;
       color: var(--text);
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
       font-size: 10.5px;
-      font-weight: 600;
+      font-weight: 500;
       text-align: center;
-      padding: 3.5px 5px;
+      padding: 3px 5px;
       outline: none;
       user-select: text;
-      transition: border-color 0.2s ease;
+      transition: border-color 0.15s ease;
     }
 
     .hex-input:focus {
-      border-color: var(--accent2);
+      border-color: rgba(255, 255, 255, 0.28);
     }
 
     /* Extra Color 3 & 4 Row */
@@ -687,19 +672,19 @@
     .mini-color-pill {
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 8px;
       padding: 6px 8px;
-      border-radius: 9px;
-      background: rgba(0, 0, 0, 0.28);
-      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--well);
+      border: 1px solid rgba(255, 255, 255, 0.065);
     }
 
     .mini-color-swatch {
       position: relative;
-      width: 20px;
-      height: 20px;
-      border-radius: 6px;
-      border: 1.5px solid rgba(255, 255, 255, 0.3);
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
       overflow: hidden;
       flex-shrink: 0;
       cursor: pointer;
@@ -721,47 +706,51 @@
     }
 
     .mini-color-name {
-      font-size: 10px;
-      font-weight: 600;
-      color: rgba(255, 255, 255, 0.85);
+      font-size: 10.5px;
+      font-weight: 550;
+      color: var(--subtext);
     }
 
     .mini-color-hex {
-      font-size: 9.5px;
+      font-size: 10px;
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-      color: var(--subtext);
+      color: var(--muted);
     }
 
     /* Preset Dots */
     .preset-dots {
       display: inline-flex;
       align-items: center;
+      gap: 2px;
     }
 
     .preset-dot {
       width: 7px;
       height: 7px;
-      border-radius: 50%;
-      border: 1px solid rgba(0, 0, 0, 0.45);
+      border-radius: 2px;
+      border: 1px solid rgba(0, 0, 0, 0.25);
     }
 
-    .preset-dot + .preset-dot {
-      margin-left: -2.5px;
+    /* Select & Action Link */
+    .select-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
 
-    /* Select & Action Pill */
     .winh-select {
       width: 100%;
-      background: rgba(0, 0, 0, 0.36);
+      background: var(--well);
       color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 6.5px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 7px;
+      padding: 6px 9px;
+      font-family: inherit;
       font-size: 11.5px;
       font-weight: 500;
       outline: none;
       cursor: pointer;
-      transition: border-color 0.2s ease;
+      transition: border-color 0.15s ease;
     }
 
     .winh-select:hover,
@@ -770,37 +759,38 @@
     }
 
     .winh-select option {
-      background: #13151f;
-      color: #f8fafc;
+      background: #141519;
+      color: #f3f4f6;
     }
 
     .text-action-btn {
       border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.05);
+      background: rgba(255, 255, 255, 0.04);
       color: var(--subtext);
-      border-radius: 6px;
-      padding: 2.5px 7px;
-      font-size: 10px;
-      font-weight: 600;
+      border-radius: 5px;
+      padding: 2px 7px;
+      font-family: inherit;
+      font-size: 10.5px;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.18s ease;
+      transition: background 0.15s ease, color 0.15s ease;
     }
 
     .text-action-btn:hover {
-      background: rgba(255, 255, 255, 0.11);
-      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
     }
 
     /* Footer */
     .footer {
-      height: 40px;
+      height: 36px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
+      padding: 0 14px;
       border-top: 1px solid var(--border);
-      background: rgba(0, 0, 0, 0.25);
+      background: rgba(0, 0, 0, 0.2);
     }
 
     .footer-meta {
@@ -812,47 +802,51 @@
     }
 
     .btn-quit {
-      border: 1px solid rgba(244, 63, 94, 0.28);
-      background: rgba(244, 63, 94, 0.1);
-      color: #fda4af;
-      border-radius: 7px;
-      padding: 4.5px 10px;
-      font-size: 10.5px;
-      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--subtext);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.18s ease;
+      transition: background 0.15s ease, color 0.15s ease;
     }
 
     .btn-quit:hover {
-      background: rgba(244, 63, 94, 0.22);
-      color: #ffffff;
-      border-color: rgba(244, 63, 94, 0.5);
+      background: rgba(239, 68, 68, 0.14);
+      color: #fca5a5;
     }
   </style>
 </head>
 <body>
-  <div class="flyout-shell" id="flyout-shell">
-    <!-- Compact Flyout Header -->
+  <div class="flyout-shell is-hydrating" id="flyout-shell">
+    <!-- Header -->
     <div class="flyout-header">
       <div class="brand">
-        <div class="logo-orb" id="logo-orb"></div>
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none">
+            <rect x="2.5" y="3.5" width="15" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/>
+            <rect x="5.5" y="6.5" width="9" height="7" rx="1.2" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
+          </svg>
+        </div>
         <div class="brand-name">Winh</div>
-        <div class="status-badge" id="status-badge">Active</div>
       </div>
 
-      <button class="power-btn power-on" id="btn-toggle-enabled" title="Pause / Resume Rim Light">
-        <svg viewBox="0 0 24 24"><path d="M13 3h-2v10h2V3zm4.83 2.17-1.42 1.42A6.92 6.92 0 0 1 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.05.88-3.9 2.29-5.18L5.87 5.4A8.93 8.93 0 0 0 3 12a9 9 0 0 0 18 0c0-2.63-1.13-5-2.93-6.65-.08-.06-.16-.12-.24-.18z"/></svg>
-        <span id="power-btn-label">Active</span>
+      <button class="power-btn power-on" id="btn-toggle-enabled" title="Toggle Edge Light">
+        <span class="power-dot"></span>
+        <span id="power-btn-label">On</span>
       </button>
     </div>
 
     <!-- Scrollable Controls -->
     <div class="content" id="flyout-content">
-      <!-- Live Now Playing Mini Strip -->
+      <!-- Live Now Playing Strip -->
       <div class="now-playing-strip" id="now-playing-strip">
         <div class="mini-art">
           <img id="mini-art-img" alt="" />
-          <svg id="mini-art-fallback" width="14" height="14" viewBox="0 0 24 24" fill="rgba(255,255,255,0.5)">
+          <svg id="mini-art-fallback" width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
             <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
           </svg>
         </div>
@@ -863,118 +857,106 @@
         <span class="mini-tag" id="mini-status">Playing</span>
       </div>
 
-      <!-- Fullscreen 3D Art Lyrics Launcher -->
-      <button class="fullscreen-cta" id="btn-fullscreen-lyrics" title="Toggle Fullscreen 3D Lyrics (Shift+F11)">
+      <!-- Fullscreen Lyrics Action -->
+      <button class="fullscreen-cta" id="btn-fullscreen-lyrics" title="Toggle Fullscreen Lyrics (Shift+F11)">
         <div class="fs-cta-left">
-          <div class="fs-cta-icon">
-            <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-          </div>
-          <div>
-            <div class="fs-cta-title">Fullscreen 3D Lyrics</div>
-            <div class="fs-cta-sub" id="fs-cta-sub">Ambient lyrics view • Shift+F11</div>
-          </div>
+          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <span class="fs-cta-title">Fullscreen Lyrics</span>
         </div>
-        <span class="fs-cta-pill" id="fs-cta-pill">Open</span>
+        <span class="fs-cta-shortcut" id="fs-cta-pill">Shift+F11</span>
       </button>
 
-      <!-- Animation & Gradient Modes -->
-      <div class="card">
-        <div class="card-title">Animation Mode</div>
+      <!-- Mode & Motion -->
+      <div class="section first">
         <div class="segmented" id="mode-segmented">
           <button class="seg-btn active" data-mode="Music Sync">Music Sync</button>
           <button class="seg-btn" data-mode="Idle Glow">Idle Glow</button>
           <button class="seg-btn" data-mode="Static">Static</button>
         </div>
 
-        <div class="card-title" style="margin-top: 2px;">Gradient Style</div>
-        <div class="chips-wrap" id="gradient-chips">
+        <div class="slider-grid">
+          <div class="slider-item">
+            <div class="slider-head">
+              <span class="slider-label">Speed</span>
+              <span class="slider-value" id="val-rotation-speed">1.0x</span>
+            </div>
+            <input type="range" class="winh-range" id="input-rotation-speed" min="0.2" max="3.0" step="0.1" value="1.0" />
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-head">
+              <span class="slider-label">Reactivity</span>
+              <span class="slider-value" id="val-reactivity">100%</span>
+            </div>
+            <input type="range" class="winh-range" id="input-reactivity" min="0.2" max="2.5" step="0.05" value="1.0" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Edge Light Geometry -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-title">Edge Light</span>
+        </div>
+
+        <div class="slider-grid">
+          <div class="slider-item">
+            <div class="slider-head">
+              <span class="slider-label">Thickness</span>
+              <span class="slider-value" id="val-thickness">32px</span>
+            </div>
+            <input type="range" class="winh-range" id="input-thickness" min="8" max="72" value="32" />
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-head">
+              <span class="slider-label">Spread</span>
+              <span class="slider-value" id="val-glow">40px</span>
+            </div>
+            <input type="range" class="winh-range" id="input-glow" min="10" max="90" value="40" />
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-head">
+              <span class="slider-label">Corner Radius</span>
+              <span class="slider-value" id="val-corner">16px</span>
+            </div>
+            <input type="range" class="winh-range" id="input-corner" min="0" max="48" value="16" />
+          </div>
+
+          <div class="slider-item">
+            <div class="slider-head">
+              <span class="slider-label">Opacity</span>
+              <span class="slider-value" id="val-opacity">85%</span>
+            </div>
+            <input type="range" class="winh-range" id="input-opacity" min="10" max="100" value="85" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Colors -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-title">Colors</span>
+          <label class="inline-switch-wrap">
+            <span class="inline-switch-label">From album art</span>
+            <span class="switch">
+              <input type="checkbox" id="toggle-auto-color" checked>
+              <span class="switch-slider"></span>
+            </span>
+          </label>
+        </div>
+
+        <div class="blend-strip" id="gradient-chips">
           <button class="chip-btn" data-gradient="1 Color">1 Color</button>
           <button class="chip-btn active" data-gradient="2 Colors">2 Colors</button>
           <button class="chip-btn" data-gradient="3 Colors">3 Colors</button>
           <button class="chip-btn" data-gradient="4 Colors">4 Colors</button>
-          <button class="chip-btn" data-gradient="Dynamic Aura">Dynamic Aura</button>
-        </div>
-      </div>
-
-      <!-- Dynamics & Motion -->
-      <div class="card">
-        <div class="card-title">Dynamics &amp; Motion</div>
-
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Rotation Speed</span>
-            <span class="slider-value" id="val-rotation-speed">1.0x</span>
-          </div>
-          <input type="range" class="winh-range" id="input-rotation-speed" min="0.2" max="3.0" step="0.1" value="1.0" />
+          <button class="chip-btn" data-gradient="Dynamic Aura">Dynamic</button>
         </div>
 
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Audio Reactivity</span>
-            <span class="slider-value" id="val-reactivity">100%</span>
-          </div>
-          <input type="range" class="winh-range" id="input-reactivity" min="0.2" max="2.5" step="0.05" value="1.0" />
-        </div>
-      </div>
-
-      <!-- Geometry & Light Appearance -->
-      <div class="card">
-        <div class="card-title">Edge Light Geometry</div>
-
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Thickness</span>
-            <span class="slider-value" id="val-thickness">32px</span>
-          </div>
-          <input type="range" class="winh-range" id="input-thickness" min="8" max="72" value="32" />
-        </div>
-
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Glow Diffusion</span>
-            <span class="slider-value" id="val-glow">40px</span>
-          </div>
-          <input type="range" class="winh-range" id="input-glow" min="10" max="90" value="40" />
-        </div>
-
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Corner Radius</span>
-            <span class="slider-value" id="val-corner">16px</span>
-          </div>
-          <input type="range" class="winh-range" id="input-corner" min="0" max="48" value="16" />
-        </div>
-
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Intensity / Opacity</span>
-            <span class="slider-value" id="val-opacity">85%</span>
-          </div>
-          <input type="range" class="winh-range" id="input-opacity" min="10" max="100" value="85" />
-        </div>
-      </div>
-
-      <!-- Color Studio (Auto-Color + Dual RGB Wheels + Presets) -->
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Color Studio</span>
-          <span class="subtle-badge" id="album-sync-badge">Album Synced</span>
-        </div>
-
-        <div class="control-row">
-          <div class="label-group">
-            <span class="label-main">Auto-Extract Album Colors</span>
-            <span class="label-sub">Sync edge aura to current track art</span>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="toggle-auto-color" checked>
-            <span class="switch-slider"></span>
-          </label>
-        </div>
-
-        <!-- Dual Circular RGB Color Wheels -->
         <div class="wheels-grid">
-          <div class="wheel-bay">
+          <div class="wheel-bay" id="wheel-bay-1">
             <div class="wheel-bay-head">
               <span>Primary</span>
               <span class="wheel-swatch-dot" id="swatch-1"></span>
@@ -983,10 +965,10 @@
             <div class="brightness-wrap">
               <input type="range" class="brightness-slider" id="bright-1" min="0" max="100" value="100" title="Primary Brightness" />
             </div>
-            <input type="text" class="hex-input" id="hex-1" maxlength="7" value="#7000FF" spellcheck="false" />
+            <input type="text" class="hex-input" id="hex-1" maxlength="7" value="#4B7BEC" spellcheck="false" />
           </div>
 
-          <div class="wheel-bay">
+          <div class="wheel-bay" id="wheel-bay-2">
             <div class="wheel-bay-head">
               <span>Secondary</span>
               <span class="wheel-swatch-dot" id="swatch-2"></span>
@@ -995,58 +977,52 @@
             <div class="brightness-wrap">
               <input type="range" class="brightness-slider" id="bright-2" min="0" max="100" value="100" title="Secondary Brightness" />
             </div>
-            <input type="text" class="hex-input" id="hex-2" maxlength="7" value="#00D2FF" spellcheck="false" />
+            <input type="text" class="hex-input" id="hex-2" maxlength="7" value="#74B9FF" spellcheck="false" />
           </div>
         </div>
 
-        <!-- Extra Colors 3 & 4 (Visible for 3/4 Colors & Dynamic Aura) -->
+        <!-- Extra Colors 3 & 4 -->
         <div class="extra-colors-row" id="extra-colors-row">
           <div class="mini-color-pill">
             <div class="mini-color-swatch" id="swatch-3">
-              <input type="color" id="input-color-3" value="#ff007f" />
+              <input type="color" id="input-color-3" value="#e07a5f" />
             </div>
             <div class="mini-color-info">
-              <span class="mini-color-name">Accent 3</span>
-              <span class="mini-color-hex" id="hex-3">#FF007F</span>
+              <span class="mini-color-name">Color 3</span>
+              <span class="mini-color-hex" id="hex-3">#E07A5F</span>
             </div>
           </div>
 
-          <div class="mini-color-pill">
+          <div class="mini-color-pill" id="color-4-pill">
             <div class="mini-color-swatch" id="swatch-4">
-              <input type="color" id="input-color-4" value="#10b981" />
+              <input type="color" id="input-color-4" value="#81b29a" />
             </div>
             <div class="mini-color-info">
-              <span class="mini-color-name">Aura 4</span>
-              <span class="mini-color-hex" id="hex-4">#10B981</span>
+              <span class="mini-color-name">Color 4</span>
+              <span class="mini-color-hex" id="hex-4">#81B29A</span>
             </div>
           </div>
         </div>
 
-        <!-- Curated Presets -->
-        <div class="card-title" style="margin-top: 2px;">Curated Presets</div>
         <div class="chips-wrap" id="presets-container"></div>
       </div>
 
-      <!-- Display & Mini Widget -->
-      <div class="card">
-        <div class="card-title">Display &amp; Mini Widget</div>
+      <!-- Display & Mini Player -->
+      <div class="section">
+        <div class="section-head">
+          <span class="section-title">Display &amp; Player</span>
+        </div>
 
-        <div class="slider-item">
-          <div class="slider-head">
-            <span class="slider-label">Target Monitor</span>
-          </div>
+        <div class="select-row">
           <select class="winh-select" id="select-display">
             <option value="all">All Displays</option>
           </select>
         </div>
 
         <div class="control-row">
-          <div class="label-group">
-            <span class="label-main">Liquid-Glass Mini Widget</span>
-            <span class="label-sub">Draggable floating now-playing card</span>
-          </div>
-          <div style="display:flex; align-items:center; gap:7px;">
-            <button class="text-action-btn" id="btn-reset-pos" style="display:none;" title="Snap widget back to bottom-right">Reset</button>
+          <span class="label-main">Floating mini player</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="text-action-btn" id="btn-reset-pos" style="display:none;" title="Reset widget position">Reset</button>
             <label class="switch">
               <input type="checkbox" id="toggle-widget" checked>
               <span class="switch-slider"></span>
@@ -1055,10 +1031,7 @@
         </div>
 
         <div class="control-row">
-          <div class="label-group">
-            <span class="label-main">Synced Lyrics in Widget</span>
-            <span class="label-sub">Live karaoke lines inside mini widget</span>
-          </div>
+          <span class="label-main">Show lyrics in mini player</span>
           <label class="switch">
             <input type="checkbox" id="toggle-lyrics" checked>
             <span class="switch-slider"></span>
@@ -1069,8 +1042,8 @@
 
     <!-- Footer -->
     <div class="footer">
-      <div class="footer-meta" id="footer-meta">Music Sync • 2 Colors</div>
-      <button class="btn-quit" id="btn-quit">Quit Winh</button>
+      <div class="footer-meta" id="footer-meta">Music Sync · 2 Colors</div>
+      <button class="btn-quit" id="btn-quit">Quit</button>
     </div>
   </div>
 
@@ -1084,10 +1057,10 @@
       enabled: true,
       mode: 'Music Sync',
       gradientMode: '2 Colors',
-      color1: '#7000ff',
-      color2: '#00d2ff',
-      color3: '#ff007f',
-      color4: '#10b981',
+      color1: '#4b7bec',
+      color2: '#74b9ff',
+      color3: '#e07a5f',
+      color4: '#81b29a',
       thickness: 32,
       glow: 40,
       cornerRadius: 16,
@@ -1135,8 +1108,6 @@
     // DOM References
     const flyoutShell = document.getElementById('flyout-shell');
     const flyoutContent = document.getElementById('flyout-content');
-    const logoOrb = document.getElementById('logo-orb');
-    const statusBadge = document.getElementById('status-badge');
     const btnToggleEnabled = document.getElementById('btn-toggle-enabled');
     const powerBtnLabel = document.getElementById('power-btn-label');
     const btnQuit = document.getElementById('btn-quit');
@@ -1149,7 +1120,6 @@
     const miniStatus = document.getElementById('mini-status');
 
     const btnFullscreenLyrics = document.getElementById('btn-fullscreen-lyrics');
-    const fsCtaSub = document.getElementById('fs-cta-sub');
     const fsCtaPill = document.getElementById('fs-cta-pill');
 
     miniArtImg.addEventListener('error', () => {
@@ -1173,9 +1143,10 @@
     const valRotationSpeed = document.getElementById('val-rotation-speed');
     const valReactivity = document.getElementById('val-reactivity');
 
-    const albumSyncBadge = document.getElementById('album-sync-badge');
     const toggleAutoColor = document.getElementById('toggle-auto-color');
+    const wheelBay2 = document.getElementById('wheel-bay-2');
     const extraColorsRow = document.getElementById('extra-colors-row');
+    const color4Pill = document.getElementById('color-4-pill');
     const inputColor3 = document.getElementById('input-color-3');
     const inputColor4 = document.getElementById('input-color-4');
     const swatch3 = document.getElementById('swatch-3');
@@ -1190,13 +1161,13 @@
     const btnResetPos = document.getElementById('btn-reset-pos');
     const footerMeta = document.getElementById('footer-meta');
 
-    // Dual Circular RGB Color Wheels (sized cleanly for 376px Windows 11 flyout)
+    // Dual Circular RGB Color Wheels
     const wheel1 = new window.LumnColorWheel({
       canvas: document.getElementById('wheel-canvas-1'),
       brightnessSlider: document.getElementById('bright-1'),
       swatchEl: document.getElementById('swatch-1'),
       hexEl: document.getElementById('hex-1'),
-      size: 114,
+      size: 84,
       initialColor: settings.color1,
       onChange: (hex) => {
         settings.color1 = hex;
@@ -1215,7 +1186,7 @@
       brightnessSlider: document.getElementById('bright-2'),
       swatchEl: document.getElementById('swatch-2'),
       hexEl: document.getElementById('hex-2'),
-      size: 114,
+      size: 84,
       initialColor: settings.color2,
       onChange: (hex) => {
         settings.color2 = hex;
@@ -1229,7 +1200,7 @@
       }
     });
 
-    // Build Curated Presets
+    // Build Presets
     const presetButtons = [];
     function renderPresets() {
       presetsContainer.textContent = '';
@@ -1282,7 +1253,7 @@
       const max = parseFloat(rangeEl.max) || 100;
       const val = parseFloat(rangeEl.value) || 0;
       const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-      rangeEl.style.background = `linear-gradient(90deg, var(--accent) 0%, var(--accent2) ${pct.toFixed(1)}%, rgba(255,255,255,0.12) ${pct.toFixed(1)}%)`;
+      rangeEl.style.background = `linear-gradient(90deg, rgba(243,244,246,0.78) 0%, rgba(243,244,246,0.78) ${pct.toFixed(1)}%, rgba(255,255,255,0.12) ${pct.toFixed(1)}%)`;
     }
 
     function pushPartialUpdate(patch) {
@@ -1292,27 +1263,26 @@
       syncVisualAccents();
     }
 
+    function formatGradientLabel(gradMode) {
+      return gradMode === 'Dynamic Aura' ? 'Dynamic' : gradMode;
+    }
+
     function syncVisualAccents() {
       const rootStyle = document.documentElement.style;
-      rootStyle.setProperty('--accent', settings.color1 || '#7000ff');
-      rootStyle.setProperty('--accent2', settings.color2 || '#00d2ff');
-
-      logoOrb.classList.toggle('paused', !settings.enabled);
-      statusBadge.classList.toggle('paused', !settings.enabled);
-      statusBadge.textContent = settings.enabled ? 'Active' : 'Paused';
+      rootStyle.setProperty('--accent', settings.color1 || '#4b7bec');
+      rootStyle.setProperty('--accent2', settings.color2 || '#74b9ff');
 
       btnToggleEnabled.classList.toggle('power-on', Boolean(settings.enabled));
-      powerBtnLabel.textContent = settings.enabled ? 'Active' : 'Paused';
+      powerBtnLabel.textContent = settings.enabled ? 'On' : 'Paused';
 
       const fsActive = Boolean(settings.fullscreenLyrics);
       btnFullscreenLyrics.classList.toggle('active', fsActive);
-      fsCtaSub.textContent = fsActive ? 'Active • Esc or Shift+F11 to exit' : 'Ambient lyrics view • Shift+F11';
-      fsCtaPill.textContent = fsActive ? 'Close' : 'Open';
-
-      albumSyncBadge.classList.toggle('visible', Boolean(settings.autoColor));
+      fsCtaPill.textContent = fsActive ? 'Active · Esc' : 'Shift+F11';
 
       const needsExtraColors = ['3 Colors', '4 Colors', 'Dynamic Aura'].includes(settings.gradientMode);
       extraColorsRow.classList.toggle('visible', needsExtraColors);
+      wheelBay2.classList.toggle('inactive-slot', settings.gradientMode === '1 Color');
+      color4Pill.classList.toggle('inactive-slot', settings.gradientMode === '3 Colors');
 
       styleRangeFill(inputThickness);
       styleRangeFill(inputGlow);
@@ -1330,17 +1300,17 @@
         item.btn.classList.toggle('active', match);
       }
 
+      const gradText = formatGradientLabel(settings.gradientMode);
       const isAll = String(settings.displayId || 'all') === 'all';
       let dispLabel = '';
       let hzVal = 60;
       if (isAll && availableDisplays.length > 1) {
-        dispLabel = `Unified (${availableDisplays.length} Displays)`;
         const primary = availableDisplays.find((d) => d.isPrimary) || availableDisplays[0];
         hzVal = primary && Number.isFinite(Number(primary.displayFrequency)) && Number(primary.displayFrequency) >= 30
           ? Math.round(primary.displayFrequency)
           : 60;
-        footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} • ${settings.gradientMode} • Unified (${availableDisplays.length}) • ${hzVal} Hz`;
-        footerMeta.title = `Multi-monitor layout active: ${availableDisplays.length} displays forming unified perimeter glow (${hzVal} Hz)`;
+        footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} · ${gradText} · ${availableDisplays.length} displays · ${hzVal} Hz`;
+        footerMeta.title = `${availableDisplays.length} displays unified (${hzVal} Hz)`;
       } else {
         const activeDisp = availableDisplays.find((d) => String(d.id) === String(settings.displayId))
           || availableDisplays.find((d) => d.isPrimary)
@@ -1349,8 +1319,8 @@
         hzVal = activeDisp && Number.isFinite(Number(activeDisp.displayFrequency)) && Number(activeDisp.displayFrequency) >= 30
           ? Math.round(activeDisp.displayFrequency)
           : 60;
-        footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} • ${settings.gradientMode} • ${hzVal} Hz`;
-        footerMeta.title = `Display: ${dispLabel} (${hzVal} Hz)`;
+        footerMeta.textContent = `${settings.enabled ? settings.mode : 'Paused'} · ${gradText} · ${hzVal} Hz`;
+        footerMeta.title = `${dispLabel} (${hzVal} Hz)`;
       }
     }
 
@@ -1398,8 +1368,8 @@
       wheel1.setHex(settings.color1);
       wheel2.setHex(settings.color2);
 
-      const c3 = ColorUtils.normalizeHex(settings.color3 || '#ff007f');
-      const c4 = ColorUtils.normalizeHex(settings.color4 || '#10b981');
+      const c3 = ColorUtils.normalizeHex(settings.color3 || '#e07a5f');
+      const c4 = ColorUtils.normalizeHex(settings.color4 || '#81b29a');
       inputColor3.value = c3;
       swatch3.style.background = c3;
       hex3.textContent = c3.toUpperCase();
@@ -1424,14 +1394,14 @@
       const allOpt = document.createElement('option');
       allOpt.value = 'all';
       allOpt.textContent = availableDisplays.length > 1
-        ? `All Displays (Unified Perimeter • ${availableDisplays.length})`
+        ? `All Displays (${availableDisplays.length} unified)`
         : 'All Displays';
       selectDisplay.appendChild(allOpt);
 
       availableDisplays.forEach((disp, idx) => {
         const opt = document.createElement('option');
         opt.value = String(disp.id);
-        const primaryTag = disp.isPrimary ? ' • Primary' : '';
+        const primaryTag = disp.isPrimary ? ' · Primary' : '';
         const baseLabel = disp.label || `Display ${idx + 1}`;
         const hz = Number(disp.displayFrequency);
         const hzTag = Number.isFinite(hz) && hz >= 30 ? ` @ ${Math.round(hz)}Hz` : '';
@@ -1594,10 +1564,22 @@
     });
 
     // --- IPC Listeners ---
+    function finishHydration() {
+      if (!flyoutShell.classList.contains('is-hydrating')) return;
+      void flyoutShell.offsetHeight;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          flyoutShell.classList.remove('is-hydrating');
+        });
+      });
+    }
+    setTimeout(finishHydration, 500);
+
     ipcRenderer.on('sync-settings', (_e, incoming) => {
       if (!incoming) return;
       Object.assign(settings, incoming);
       renderAllUI();
+      finishHydration();
     });
 
     ipcRenderer.on('displays-updated', (_e, displays) => {
@@ -1638,7 +1620,7 @@
       miniTitle.textContent = data.cleanTitle || data.title || 'Unknown Track';
       const artistText = data.cleanArtist || data.artist || '';
       const appText = data.appName || 'System Media';
-      miniSub.textContent = artistText ? `${artistText} • ${appText}` : appText;
+      miniSub.textContent = artistText ? `${artistText} · ${appText}` : appText;
       miniStatus.textContent = data.status || 'Playing';
 
       let artSrc = '';

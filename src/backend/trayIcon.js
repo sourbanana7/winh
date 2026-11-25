@@ -42,21 +42,38 @@ function parseHexRgb(hex, fallback) {
   return fallback;
 }
 
-function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = true, size = 32) {
+function sdRoundedRect(px, py, hw, hh, r) {
+  const qx = Math.abs(px) - hw + r;
+  const qy = Math.abs(py) - hh + r;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+}
+
+function clamp01(v) {
+  return v < 0 ? 0 : (v > 1 ? 1 : v);
+}
+
+function createTrayPngBuffer(color1 = '#4b7bec', color2 = '#74b9ff', enabled = true, size = 32) {
   const dim = Math.max(16, Math.min(512, Math.round(size)));
   const stride = dim * 4 + 1;
   const raw = Buffer.alloc(stride * dim);
 
-  const c1 = enabled ? parseHexRgb(color1, [112, 0, 255]) : [130, 130, 145];
-  const c2 = enabled ? parseHexRgb(color2, [0, 210, 255]) : [95, 95, 110];
+  const c1 = enabled ? parseHexRgb(color1, [75, 123, 236]) : [132, 138, 150];
+  const c2 = enabled ? parseHexRgb(color2, [116, 185, 255]) : [104, 110, 122];
 
   const scale = dim / 32;
   const cx = (dim - 1) / 2;
   const cy = (dim - 1) / 2;
-  const outerR = 13.5 * scale;
-  const ringMidR = 9.2 * scale;
-  const ringHalfW = 2.6 * scale;
-  const aaFeather = Math.max(0.8, 1.4 * scale);
+  const aa = Math.max(0.65, 0.85 * scale);
+
+  // Crisp rounded screen-frame badge
+  const outerHw = 14.0 * scale;
+  const outerHh = 11.5 * scale;
+  const outerR = 3.8 * scale;
+
+  const frameHw = 10.2 * scale;
+  const frameHh = 7.7 * scale;
+  const frameR = 2.6 * scale;
+  const frameHalfStroke = Math.max(0.85, 1.15 * scale);
 
   for (let y = 0; y < dim; y++) {
     const rowStart = y * stride;
@@ -64,44 +81,48 @@ function createTrayPngBuffer(color1 = '#7000ff', color2 = '#00d2ff', enabled = t
     for (let x = 0; x < dim; x++) {
       const dx = x - cx;
       const dy = y - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const t = Math.max(0, Math.min(1, (x + y) / (2 * (dim - 1))));
-
-      const rCol = Math.round(c1[0] * (1 - t) + c2[0] * t);
-      const gCol = Math.round(c1[1] * (1 - t) + c2[1] * t);
-      const bCol = Math.round(c1[2] * (1 - t) + c2[2] * t);
+      const sdOuter = sdRoundedRect(dx, dy, outerHw, outerHh, outerR);
 
       let r = 0;
       let g = 0;
       let b = 0;
       let a = 0;
 
-      // Soft outer glow halo + crisp dark disc backing + neon ring
-      if (dist <= outerR + 1.5 * scale) {
-        const discAlpha = Math.max(0, Math.min(1, (outerR + 0.5 * scale - dist) / Math.max(1, scale * 0.7)));
-        const ringDist = Math.abs(dist - ringMidR);
-        const ringAlpha = Math.max(0, Math.min(1, (ringHalfW + 0.8 * scale - ringDist) / aaFeather));
-        const glowAlpha = Math.exp(-Math.pow(ringDist / (4.2 * scale), 2)) * 0.55;
+      if (sdOuter <= aa) {
+        const badgeAlpha = clamp01(0.5 - sdOuter / aa);
+        const t = clamp01((x + y) / (2 * (dim - 1)));
+        const rCol = c1[0] * (1 - t) + c2[0] * t;
+        const gCol = c1[1] * (1 - t) + c2[1] * t;
+        const bCol = c1[2] * (1 - t) + c2[2] * t;
 
-        const baseR = 14;
-        const baseG = 14;
-        const baseB = 20;
+        // Matte dark slate backing
+        r = 22;
+        g = 23;
+        b = 28;
 
-        const blend = Math.min(1, ringAlpha + glowAlpha * 0.6);
-        r = Math.round(baseR * (1 - blend) + rCol * blend);
-        g = Math.round(baseG * (1 - blend) + gCol * blend);
-        b = Math.round(baseB * (1 - blend) + bCol * blend);
-
-        // Brighten core of ring
-        if (ringAlpha > 0.7) {
-          const core = (ringAlpha - 0.7) / 0.3 * 0.35;
-          r = Math.min(255, Math.round(r + (255 - r) * core));
-          g = Math.min(255, Math.round(g + (255 - g) * core));
-          b = Math.min(255, Math.round(b + (255 - b) * core));
+        // Subtle outer border hairline so icon reads cleanly on dark taskbars
+        const borderBand = clamp01(1 - Math.abs(sdOuter + 0.6 * scale) / (0.85 * scale));
+        if (borderBand > 0) {
+          const borderMix = borderBand * 0.2;
+          r = r * (1 - borderMix) + 255 * borderMix;
+          g = g * (1 - borderMix) + 255 * borderMix;
+          b = b * (1 - borderMix) + 255 * borderMix;
         }
 
-        const totalAlpha = Math.max(discAlpha * 0.94, glowAlpha * (dist <= outerR + 1.5 * scale ? 1 : 0));
-        a = Math.round(Math.max(0, Math.min(1, totalAlpha)) * 255);
+        // Crisp inner screen bezel frame
+        const sdFrame = sdRoundedRect(dx, dy, frameHw, frameHh, frameR);
+        const frameStrokeAlpha = clamp01(0.5 + (frameHalfStroke - Math.abs(sdFrame)) / aa);
+        if (frameStrokeAlpha > 0) {
+          const mixAmt = enabled ? frameStrokeAlpha : frameStrokeAlpha * 0.65;
+          r = r * (1 - mixAmt) + rCol * mixAmt;
+          g = g * (1 - mixAmt) + gCol * mixAmt;
+          b = b * (1 - mixAmt) + bCol * mixAmt;
+        }
+
+        r = Math.round(r);
+        g = Math.round(g);
+        b = Math.round(b);
+        a = Math.round(badgeAlpha * 255);
       }
 
       const px = rowStart + 1 + x * 4;

@@ -12,52 +12,52 @@
 
   const CURATED_PRESETS = [
     {
-      id: 'cyberpunk',
-      name: 'Cyberpunk',
-      color1: '#7000ff',
-      color2: '#00d2ff',
-      color3: '#ff007f',
-      color4: '#00f5a0'
+      id: 'studio',
+      name: 'Studio White',
+      color1: '#e2e8f0',
+      color2: '#94a3b8',
+      color3: '#cbd5e1',
+      color4: '#f8fafc'
     },
     {
-      id: 'sunset',
-      name: 'Sunset Neon',
-      color1: '#ff007f',
-      color2: '#7928ca',
-      color3: '#ff8a00',
-      color4: '#ff4d4d'
+      id: 'nordic',
+      name: 'Cobalt',
+      color1: '#4b7bec',
+      color2: '#74b9ff',
+      color3: '#3867d6',
+      color4: '#a5b1c2'
     },
     {
-      id: 'aurora',
-      name: 'Aurora',
-      color1: '#00f2fe',
-      color2: '#4facfe',
-      color3: '#7000ff',
-      color4: '#43e97b'
+      id: 'tungsten',
+      name: 'Tungsten',
+      color1: '#e67e22',
+      color2: '#f5cd79',
+      color3: '#d35400',
+      color4: '#f7d794'
     },
     {
-      id: 'emerald',
-      name: 'Emerald',
-      color1: '#10b981',
-      color2: '#38f9d7',
-      color3: '#00b4d8',
-      color4: '#43e97b'
+      id: 'dusk',
+      name: 'Dusk',
+      color1: '#5c6bc0',
+      color2: '#e07a5f',
+      color3: '#81b29a',
+      color4: '#f2cc8f'
     },
     {
-      id: 'solar',
-      name: 'Solar Flare',
-      color1: '#ff512f',
-      color2: '#f09819',
-      color3: '#ff0080',
-      color4: '#ffd200'
+      id: 'forest',
+      name: 'Forest',
+      color1: '#2d6a4f',
+      color2: '#74c69d',
+      color3: '#52b788',
+      color4: '#b7e4c7'
     },
     {
-      id: 'velvet',
-      name: 'Velvet Rose',
-      color1: '#ec4899',
-      color2: '#8b5cf6',
-      color3: '#f43f5e',
-      color4: '#38bdf8'
+      id: 'ember',
+      name: 'Ember',
+      color1: '#c0392b',
+      color2: '#e17055',
+      color3: '#d63031',
+      color4: '#fab1a0'
     }
   ];
 
@@ -67,7 +67,7 @@
   }
 
   /** Normalize a hex string to #rrggbb lowercase, falling back when invalid. */
-  function normalizeHex(hex, fallback = '#7000ff') {
+  function normalizeHex(hex, fallback = '#4b7bec') {
     if (typeof hex !== 'string') return fallback;
     let clean = hex.trim();
     if (!clean.startsWith('#')) clean = '#' + clean;

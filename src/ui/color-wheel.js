@@ -36,7 +36,7 @@
 
       this.size = opts.size || 132;
       this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-      this.hsv = ColorUtils.hexToHsv(opts.initialColor || '#7000ff');
+      this.hsv = ColorUtils.hexToHsv(opts.initialColor || '#4b7bec');
       this.isDragging = false;
       this.isSliderDragging = false;
       this._wheelBuffer = null;
@@ -237,12 +237,12 @@
         ctx.restore();
       }
 
-      // Subtle specular glass border around wheel
+      // Subtle border around wheel
       ctx.save();
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.lineWidth = 1.5 * this.dpr;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.lineWidth = 1 * this.dpr;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
       ctx.stroke();
       ctx.restore();
 
@@ -280,7 +280,6 @@
 
       if (this.swatchEl) {
         this.swatchEl.style.background = hex;
-        this.swatchEl.style.boxShadow = `0 0 12px ${hex}66`;
       }
 
       if (this.hexEl) {
