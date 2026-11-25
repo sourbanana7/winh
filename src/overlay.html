@@ -1272,6 +1272,14 @@
     });
 
     ipcRenderer.on('media-update', (_e, data) => {
+      const wasPlaying = mediaState.status === 'Playing';
+      const isChangingBuffering = Boolean(data && data.status === 'Changing' && wasPlaying);
+      const effectiveStatus = (isChangingBuffering || (data && data.status === 'Playing'))
+        ? 'Playing'
+        : (data ? (data.status || 'Unknown') : 'Stopped');
+      const isPlaying = effectiveStatus === 'Playing';
+      const isPaused = effectiveStatus === 'Paused';
+
       if (!showWidget) {
         if (!data || !data.title || data.status === 'Closed') {
           mediaState.active = false;
@@ -1281,11 +1289,11 @@
           rimRenderer.setMediaPlaying(false);
         } else {
           mediaState.active = Boolean(data.active !== false);
-          mediaState.status = data.status || 'Unknown';
+          mediaState.status = effectiveStatus;
           mediaState.position = Number(data.position) || 0;
           mediaState.duration = Number(data.duration) || 0;
           mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || Date.now();
-          rimRenderer.setMediaPlaying(data.status === 'Playing');
+          rimRenderer.setMediaPlaying(isPlaying);
         }
         scheduleFrame();
         return;
@@ -1332,11 +1340,8 @@
         return;
       }
 
-      const isPlaying = data.status === 'Playing';
-      const isPaused = data.status === 'Paused';
-
       mediaState.active = Boolean(data.active !== false);
-      mediaState.status = data.status || 'Unknown';
+      mediaState.status = effectiveStatus;
       mediaState.position = Number(data.position) || 0;
       mediaState.duration = Number(data.duration) || 0;
       mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || Date.now();

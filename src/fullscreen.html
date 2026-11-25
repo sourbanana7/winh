@@ -734,8 +734,17 @@
       position: 0,
       duration: 0,
       lastUpdatedMs: Date.now(),
-      thumbnailKey: ''
+      thumbnailKey: '',
+      trackSig: ''
     };
+
+    function getMediaTrackSig(data) {
+      if (!data) return '';
+      const app = data.appName || data.appId || '';
+      const title = data.cleanTitle || data.title || '';
+      const artist = data.cleanArtist || data.artist || '';
+      return `${app}|${title}|${artist}`;
+    }
 
     let lyricsState = {
       isSynced: false,
@@ -750,6 +759,34 @@
     let manualBrowseTimer = null;
     let manualBrowseOffset = 0;
     let isManualBrowsing = false;
+
+    // --- Seek Grace & Transient State Mitigation ---
+    let seekGraceUntilMs = 0;
+    let seekTargetSec = 0;
+    let seekGraceWasPlaying = false;
+    let seekGraceTrackSig = '';
+
+    function clearSeekGrace() {
+      seekGraceUntilMs = 0;
+      seekGraceTrackSig = '';
+    }
+
+    function commitSeek(targetSec) {
+      if (!Number.isFinite(targetSec) || targetSec < 0) return;
+      if (mediaState.duration > 0) {
+        targetSec = Math.max(0, Math.min(mediaState.duration, targetSec));
+      }
+      const wasPlaying = mediaState.status === 'Playing';
+      seekTargetSec = targetSec;
+      seekGraceWasPlaying = wasPlaying;
+      seekGraceTrackSig = mediaState.trackSig;
+      seekGraceUntilMs = Date.now() + 900;
+
+      mediaState.position = targetSec;
+      mediaState.lastUpdatedMs = Date.now();
+      ipcRenderer.send('seek-media', targetSec);
+      syncPlayheadAndLyrics(Date.now());
+    }
 
     let targetHz = 60;
     let audioAuraSmooth = 0;
@@ -780,10 +817,14 @@
     revealTopBar();
 
     function exitFullscreen() {
+      clearSeekGrace();
       ipcRenderer.send('toggle-fullscreen-lyrics', false);
     }
 
-    btnExit.addEventListener('click', exitFullscreen);
+    btnExit.addEventListener('click', () => {
+      btnExit.blur();
+      exitFullscreen();
+    });
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         exitFullscreen();
@@ -793,14 +834,27 @@
         ipcRenderer.send('fullscreen-hotkey');
       } else if (e.code === 'Space' && !e.target.closest('button')) {
         e.preventDefault();
+        clearSeekGrace();
         ipcRenderer.send('media-control', 'play-pause');
       }
     });
 
     // --- Transport Controls ---
-    btnPrev.addEventListener('click', () => ipcRenderer.send('media-control', 'previous'));
-    btnPlayPause.addEventListener('click', () => ipcRenderer.send('media-control', 'play-pause'));
-    btnNext.addEventListener('click', () => ipcRenderer.send('media-control', 'next'));
+    btnPrev.addEventListener('click', () => {
+      btnPrev.blur();
+      clearSeekGrace();
+      ipcRenderer.send('media-control', 'previous');
+    });
+    btnPlayPause.addEventListener('click', () => {
+      btnPlayPause.blur();
+      clearSeekGrace();
+      ipcRenderer.send('media-control', 'play-pause');
+    });
+    btnNext.addEventListener('click', () => {
+      btnNext.blur();
+      clearSeekGrace();
+      ipcRenderer.send('media-control', 'next');
+    });
 
     // --- Scrubbable Progress Bar ---
     function getScrubRatio(clientX) {
@@ -825,6 +879,9 @@
     scrubTrack.addEventListener('pointerdown', (e) => {
       if (e.button !== 0 || mediaState.duration <= 0) return;
       e.preventDefault();
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
       isScrubbing = true;
       scrubTrack.classList.add('scrubbing');
       if (scrubTrack.setPointerCapture) {
@@ -846,22 +903,23 @@
       if (!isScrubbing) return;
       isScrubbing = false;
       scrubTrack.classList.remove('scrubbing');
-      if (scrubTrack.releasePointerCapture && e.pointerId !== undefined) {
+      if (scrubTrack.releasePointerCapture && e && e.pointerId !== undefined) {
         try {
           scrubTrack.releasePointerCapture(e.pointerId);
         } catch (_) {}
       }
       if (mediaState.duration > 0) {
         const targetSec = scrubPreviewRatio * mediaState.duration;
-        mediaState.position = targetSec;
-        mediaState.lastUpdatedMs = Date.now();
-        ipcRenderer.send('seek-media', targetSec);
-        syncPlayheadAndLyrics(Date.now());
+        commitSeek(targetSec);
       }
     }
 
     scrubTrack.addEventListener('pointerup', finishScrub);
     scrubTrack.addEventListener('pointercancel', finishScrub);
+    scrubTrack.addEventListener('lostpointercapture', finishScrub);
+    window.addEventListener('blur', () => {
+      if (isScrubbing) finishScrub({});
+    });
 
     // --- Backdrop Crossfade & Artwork Loading Helpers ---
     let artLoadSeq = 0;
@@ -981,10 +1039,7 @@
           isManualBrowsing = false;
           manualBrowseOffset = 0;
           lyricsStage.classList.remove('browsing');
-          mediaState.position = line.time;
-          mediaState.lastUpdatedMs = Date.now();
-          ipcRenderer.send('seek-media', line.time);
-          syncPlayheadAndLyrics(Date.now());
+          commitSeek(line.time);
         });
         lyricsTrack.appendChild(btn);
         lyricsState.lineEls.push(btn);
@@ -1091,11 +1146,13 @@
 
     ipcRenderer.on('media-update', (_e, data) => {
       if (!data || !data.title || data.status === 'Closed') {
+        clearSeekGrace();
         mediaState.active = false;
         mediaState.status = 'Stopped';
         mediaState.position = 0;
         mediaState.duration = 0;
         mediaState.thumbnailKey = '';
+        mediaState.trackSig = '';
 
         statusDot.className = 'status-dot';
         artCard.classList.add('paused');
@@ -1124,14 +1181,47 @@
         return;
       }
 
-      const isPlaying = data.status === 'Playing';
-      const isPaused = data.status === 'Paused';
+      const now = Date.now();
+      const currentTrackSig = getMediaTrackSig(data);
+      if (seekGraceTrackSig && currentTrackSig !== seekGraceTrackSig) {
+        clearSeekGrace();
+      }
+      mediaState.trackSig = currentTrackSig;
+
+      const inSeekGrace = now < seekGraceUntilMs;
+      const wasPlaying = mediaState.status === 'Playing';
+
+      let effectiveStatus = data.status || 'Unknown';
+      if (inSeekGrace && seekGraceWasPlaying) {
+        if (data.status === 'Changing' || data.status === 'Paused') {
+          effectiveStatus = 'Playing';
+        }
+      } else if (data.status === 'Changing' && wasPlaying) {
+        effectiveStatus = 'Playing';
+      }
+
+      const isPlaying = effectiveStatus === 'Playing';
+      const isPaused = effectiveStatus === 'Paused';
 
       mediaState.active = Boolean(data.active !== false);
-      mediaState.status = data.status || 'Unknown';
-      mediaState.position = Number(data.position) || 0;
+      mediaState.status = effectiveStatus;
       mediaState.duration = Number(data.duration) || 0;
-      mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || Date.now();
+
+      const incomingPos = Number(data.position) || 0;
+      if (inSeekGrace) {
+        const posDiff = Math.abs(incomingPos - seekTargetSec);
+        if (posDiff <= 2.0) {
+          // Player confirmed seek position
+          clearSeekGrace();
+          mediaState.position = incomingPos;
+          mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || now;
+        }
+        // Otherwise posDiff > 2.0 (stale pre-seek position): reject and leave
+        // mediaState.position and mediaState.lastUpdatedMs untouched so monotonic extrapolation continues!
+      } else {
+        mediaState.position = incomingPos;
+        mediaState.lastUpdatedMs = Number(data.lastUpdatedMs) || now;
+      }
 
       statusDot.className = 'status-dot' + (isPlaying ? ' playing' : isPaused ? ' paused' : '');
       artCard.classList.toggle('paused', !isPlaying);
@@ -1213,8 +1303,9 @@
     function syncPlayheadAndLyrics(nowMs) {
       if (!mediaState.active && mediaState.duration <= 0) return;
 
+      const isCurrentlyPlaying = mediaState.status === 'Playing' || (Date.now() < seekGraceUntilMs && seekGraceWasPlaying);
       let estimatedPos = mediaState.position;
-      if (mediaState.status === 'Playing') {
+      if (isCurrentlyPlaying) {
         estimatedPos += Math.max(0, (nowMs - mediaState.lastUpdatedMs) / 1000);
       }
 
@@ -1223,7 +1314,7 @@
           estimatedPos = Math.min(mediaState.duration, Math.max(0, estimatedPos));
           applyProgressVisual(estimatedPos / mediaState.duration);
         } else {
-          applyProgressVisual(mediaState.status === 'Playing' ? 1 : 0);
+          applyProgressVisual(isCurrentlyPlaying ? 1 : 0);
         }
 
         const elapsedStr = formatTime(estimatedPos);
@@ -1275,8 +1366,12 @@
 
       syncPlayheadAndLyrics(Date.now());
 
+      const isCurrentlyPlaying =
+        mediaState.status === 'Playing' ||
+        (Date.now() < seekGraceUntilMs && seekGraceWasPlaying);
+
       const needsMore =
-        (mediaState.active && mediaState.status === 'Playing') ||
+        (mediaState.active && isCurrentlyPlaying) ||
         Math.abs(audioAuraTarget - audioAuraSmooth) > 0.005;
 
       if (needsMore) {

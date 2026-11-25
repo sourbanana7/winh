@@ -52,7 +52,7 @@ function Detect-MimeType([byte[]]$bytes, [string]$reportedType) {
     return 'image/jpeg'
 }
 
-function Get-PreferredSessionInfo($mgr) {
+function Get-PreferredSessionInfo($mgr, $lastSession = $null, [int64]$lastSeekAtMs = 0L, [int64]$nowMs = 0L) {
     $current = $null
     try { $current = $mgr.GetCurrentSession() } catch {}
     $all = $null
@@ -74,12 +74,22 @@ function Get-PreferredSessionInfo($mgr) {
             if ($status -eq 'Closed') { return }
             $baseScore = switch ($status) {
                 'Playing'  { 100 }
+                'Changing' { 90 }
                 'Paused'   { 40 }
                 'Opened'   { 20 }
-                'Changing' { 15 }
                 default    { 0 }
             }
             if ($isCurrent) { $baseScore += 10 }
+
+            if ($lastSession -and [object]::ReferenceEquals($sess, $lastSession)) {
+                if ($status -ne 'Closed' -and $status -ne 'Stopped') {
+                    $baseScore += 5
+                    if ($lastSeekAtMs -gt 0L -and $nowMs -gt 0L -and ($nowMs - $lastSeekAtMs) -lt 1500L) {
+                        $baseScore += 70
+                    }
+                }
+            }
+
             [void]$entries.Add([PSCustomObject]@{
                 Session = $sess
                 PlaybackInfo = $playbackInfo
@@ -147,6 +157,12 @@ function Invoke-SessionCommand($session, [string]$cmd) {
                 if ($tl -and $tl.MaxSeekTime.Ticks -gt $tl.MinSeekTime.Ticks) {
                     if ($targetTicks -lt $tl.MinSeekTime.Ticks) { $targetTicks = $tl.MinSeekTime.Ticks }
                     if ($targetTicks -gt $tl.MaxSeekTime.Ticks) { $targetTicks = $tl.MaxSeekTime.Ticks }
+                } elseif ($tl -and $tl.EndTime.Ticks -gt $startTicks) {
+                    $span = $tl.EndTime.Ticks - $startTicks
+                    $safety = 2000000L # 200ms
+                    $maxTicks = if ($span -gt 20000000L) { $tl.EndTime.Ticks - $safety } else { $tl.EndTime.Ticks }
+                    if ($targetTicks -lt $startTicks) { $targetTicks = $startTicks }
+                    if ($targetTicks -gt $maxTicks) { $targetTicks = $maxTicks }
                 } elseif ($targetTicks -lt 0L) {
                     $targetTicks = 0L
                 }
@@ -192,6 +208,11 @@ $lastThumbTrackKey = ''
 $lastThumbBase64 = ''
 $lastThumbMime = ''
 $lastSession = $null
+
+$lastSeekAtMs = 0L
+$lastSeekSession = $null
+$lastSeekTargetSec = 0.0
+$lastSeekWasPlaying = $false
 
 $useStdin = [Console]::IsInputRedirected
 $cmdQueue = $null
@@ -256,8 +277,30 @@ while ($true) {
                 if (-not $targetSession) {
                     try { $targetSession = $mgr.GetCurrentSession() } catch {}
                 }
-                if (Invoke-SessionCommand $targetSession $cmdName) {
-                    $lastMetaSig = ''
+
+                if ($cmdName.StartsWith('seek:')) {
+                    $pInfo = $null
+                    try { $pInfo = $targetSession.GetPlaybackInfo() } catch {}
+                    $statusBeforeSeek = if ($pInfo) { $pInfo.PlaybackStatus.ToString() } else { '' }
+                    $wasPlaying = ($statusBeforeSeek -eq 'Playing' -or $lastEmittedStatus -eq 'Playing')
+
+                    $seekTickStr = $cmdName.Substring(5)
+                    $seekTicksVal = 0L
+                    $targetSecVal = if ([int64]::TryParse($seekTickStr, [ref]$seekTicksVal)) { [Math]::Max(0.0, $seekTicksVal / 10000000.0) } else { 0.0 }
+
+                    if (Invoke-SessionCommand $targetSession $cmdName) {
+                        $nowSeekMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                        $lastSeekAtMs = $nowSeekMs
+                        $lastSeekSession = $targetSession
+                        $lastSeekTargetSec = $targetSecVal
+                        $lastSeekWasPlaying = $wasPlaying
+                    }
+                } else {
+                    if (Invoke-SessionCommand $targetSession $cmdName) {
+                        $lastMetaSig = ''
+                        $lastSeekAtMs = 0L
+                        $lastSeekSession = $null
+                    }
                 }
                 $hadCommand = $true
             }
@@ -268,8 +311,15 @@ while ($true) {
     }
 
     try {
-        $info = Get-PreferredSessionInfo $mgr
         $nowMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+        $info = Get-PreferredSessionInfo $mgr $lastSession $lastSeekAtMs $nowMs
+
+        if ($info -and $info.Session) {
+            if ($lastSeekSession -and -not [object]::ReferenceEquals($info.Session, $lastSeekSession)) {
+                $lastSeekAtMs = 0L
+                $lastSeekSession = $null
+            }
+        }
 
         if ($info -and ($info.Title.Trim().Length -gt 0 -or $info.Status -eq 'Playing')) {
             $session = $info.Session
@@ -288,13 +338,27 @@ while ($true) {
             $duration = [Math]::Max(0.0, $endSec - $startSec)
             $rawPos = if ($timeline) { [Math]::Max(0.0, $timeline.Position.TotalSeconds - $startSec) } else { 0.0 }
 
+            $inSeekGrace = ($lastSeekSession -and [object]::ReferenceEquals($session, $lastSeekSession) -and ($nowMs - $lastSeekAtMs) -lt 900L)
+            if ($inSeekGrace) {
+                $timeSinceSeekMs = $nowMs - $lastSeekAtMs
+                if ($lastSeekWasPlaying) {
+                    if ($playbackStatus -eq 'Changing' -or ($playbackStatus -eq 'Paused' -and $timeSinceSeekMs -lt 450L)) {
+                        $playbackStatus = 'Playing'
+                    }
+                }
+                if ([Math]::Abs($rawPos - $lastSeekTargetSec) -le 1.5) {
+                    $lastSeekAtMs = 0L
+                    $lastSeekSession = $null
+                }
+            }
+
             $tlUpdatedMs = 0L
             if ($timeline -and $timeline.LastUpdatedTime -and $timeline.LastUpdatedTime.Year -gt 2000) {
                 $tlUpdatedMs = $timeline.LastUpdatedTime.ToUnixTimeMilliseconds()
             }
 
             $effectivePos = $rawPos
-            if ($playbackStatus -eq 'Playing' -and $tlUpdatedMs -gt 0) {
+            if ($playbackStatus -eq 'Playing' -and $tlUpdatedMs -gt 0 -and (-not $inSeekGrace -or $tlUpdatedMs -ge $lastSeekAtMs)) {
                 $elapsedSec = [Math]::Max(0.0, ($nowMs - $tlUpdatedMs) / 1000.0)
                 $candidatePos = $rawPos + $elapsedSec
                 if ($duration -gt 0.0) {
