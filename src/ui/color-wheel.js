@@ -126,7 +126,11 @@
         e.preventDefault();
         this.isDragging = true;
         if (this.canvas.setPointerCapture) {
-          this.canvas.setPointerCapture(e.pointerId);
+          try {
+            this.canvas.setPointerCapture(e.pointerId);
+          } catch (_) {
+            // ignore if pointer id is not active
+          }
         }
         pickFromPointer(e.clientX, e.clientY);
       });
@@ -139,7 +143,7 @@
       const stopDrag = (e) => {
         if (!this.isDragging) return;
         this.isDragging = false;
-        if (this.canvas.releasePointerCapture && e.pointerId !== undefined) {
+        if (this.canvas.releasePointerCapture && e && e.pointerId !== undefined) {
           try {
             this.canvas.releasePointerCapture(e.pointerId);
           } catch (_) {
@@ -150,6 +154,7 @@
 
       this.canvas.addEventListener('pointerup', stopDrag);
       this.canvas.addEventListener('pointercancel', stopDrag);
+      this.canvas.addEventListener('lostpointercapture', stopDrag);
 
       const stopSlider = () => {
         this.isSliderDragging = false;
@@ -159,7 +164,15 @@
       });
       this.brightnessSlider.addEventListener('pointerup', stopSlider);
       this.brightnessSlider.addEventListener('pointercancel', stopSlider);
+      this.brightnessSlider.addEventListener('lostpointercapture', stopSlider);
       this.brightnessSlider.addEventListener('blur', stopSlider);
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('blur', () => {
+          this.isDragging = false;
+          this.isSliderDragging = false;
+        });
+      }
 
       this.brightnessSlider.addEventListener('input', (e) => {
         const val = parseFloat(e.target.value);
@@ -173,14 +186,16 @@
           const parsed = ColorUtils.normalizeHex(this.hexEl.value, '');
           if (parsed) {
             this.setHex(parsed, true);
+            this.hexEl.value = this.getHex().toUpperCase();
             this.onChange(this.getHex());
           } else {
-            this._syncDisplays();
+            this.hexEl.value = this.getHex().toUpperCase();
           }
         };
         this.hexEl.addEventListener('change', commitHex);
         this.hexEl.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
+            e.preventDefault();
             commitHex();
             this.hexEl.blur();
           }

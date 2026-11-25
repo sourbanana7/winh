@@ -830,7 +830,9 @@
       isScrubbing = true;
       scrubTrack.classList.add('scrubbing');
       if (scrubTrack.setPointerCapture) {
-        scrubTrack.setPointerCapture(e.pointerId);
+        try {
+          scrubTrack.setPointerCapture(e.pointerId);
+        } catch (_) {}
       }
       scrubPreviewRatio = getScrubRatio(e.clientX);
       applyProgressVisual(scrubPreviewRatio);

@@ -423,8 +423,9 @@
       max-height: 0;
       min-height: 0;
       padding-top: 0;
-      margin-top: -12px;
+      margin-top: -11px;
       opacity: 0;
+      border-top-width: 0;
       border-top-color: transparent;
       pointer-events: none;
     }
@@ -803,7 +804,9 @@
     });
 
     window.addEventListener('blur', () => {
-      if (!isDraggingWidget) {
+      if (isDraggingWidget) {
+        finishWidgetDrag();
+      } else {
         isPointerInsideWidget = false;
         setIgnoreMouse(true);
       }
@@ -867,7 +870,9 @@
 
       widgetWrapper.classList.add('dragging');
       if (glassCard.setPointerCapture) {
-        glassCard.setPointerCapture(e.pointerId);
+        try {
+          glassCard.setPointerCapture(e.pointerId);
+        } catch (_) {}
       }
     });
 
@@ -912,11 +917,17 @@
         currentSettings.widgetPosition = pos;
         ipcRenderer.send('update-settings', { widgetPosition: pos });
       }
-      syncMousePassthroughFromCoords(e.clientX, e.clientY);
+      if (e && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
+        syncMousePassthroughFromCoords(e.clientX, e.clientY);
+      } else {
+        isPointerInsideWidget = false;
+        setIgnoreMouse(true);
+      }
     }
 
     glassCard.addEventListener('pointerup', finishWidgetDrag);
     glassCard.addEventListener('pointercancel', finishWidgetDrag);
+    glassCard.addEventListener('lostpointercapture', finishWidgetDrag);
 
     // --- Transport Button Actions ---
     btnPrev.addEventListener('click', (e) => {

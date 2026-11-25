@@ -1462,11 +1462,16 @@
       };
       slider.addEventListener('pointerup', clearActive);
       slider.addEventListener('pointercancel', clearActive);
+      slider.addEventListener('lostpointercapture', clearActive);
       slider.addEventListener('change', clearActive);
     });
 
-    window.addEventListener('pointerup', flushPendingUpdate);
-    window.addEventListener('blur', flushPendingUpdate);
+    const clearAllDragAndFlush = () => {
+      activeSliderEl = null;
+      flushPendingUpdate();
+    };
+    window.addEventListener('pointerup', clearAllDragAndFlush);
+    window.addEventListener('blur', clearAllDragAndFlush);
     window.addEventListener('beforeunload', flushPendingUpdate);
 
     inputRotationSpeed.addEventListener('input', (e) => {
