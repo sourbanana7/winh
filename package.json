@@ -20,7 +20,7 @@
     "wasapi"
   ],
   "author": "Affan09",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.6"
   }

@@ -51,3 +51,7 @@ npx tauri build
 ```
 
 Outputs release binaries in `src-tauri/target/release/winh.exe` and `src-tauri/target/release/bundle/nsis/Winh_1.0.3_x64-setup.exe`.
+
+## License
+
+Winh is licensed under the [MIT License](LICENSE).
