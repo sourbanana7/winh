@@ -22,7 +22,7 @@ All notable changes and fixes to **Winh** are documented in this file.
    - **Problem:** Spanning multiple monitors previously drew isolated 4-sided glows on every display (creating unwanted glow along shared internal monitor seams), let mixed-Hz displays drift out of color phase, and duplicated the floating album cover widget across every monitor.
    - **Fix:**
      - Added `src/backend/monitorLayout.js` (`computeMultiMonitorLayout`) to compute the union bounding box, strip shared internal borders (with `4 px` DPI tolerance), merge exposed edges into `outerSegments`, and detect true outer `convexCorners`.
-     - Upgraded the WebGL2 GLSL shader (and Canvas2D fallback) in `src/ui/rim-renderer.js` to map fragments into virtual desktop coordinates, render glow strictly along `outerSegments` with rounded `convexCorners`, orbit colors seamlessly around `u_desktopCenter`, and stay phase-aligned across displays via `syncEpochMs` and `phase-sync` heartbeats.
+     - Upgraded the WebGL2 GLSL shader (and Canvas2D fallback) in `src/ui/rim-renderer.js` to map fragments into virtual desktop coordinates, render glow strictly along `outerSegments` with rounded `convexCorners`, orbit colors smoothly around `u_desktopCenter`, and stay phase-aligned across displays via `syncEpochMs` and `phase-sync` heartbeats.
      - Added `showWidget` gating in `display-config` so in `All Displays` mode only the primary monitor renders the floating album cover & lyrics widget while secondary displays render pure perimeter glow and stay click-through.
 
 ## [1.0.1] - 2026-11-13

@@ -66,11 +66,11 @@
     @keyframes flyoutPopIn {
       0% {
         opacity: 0.7;
-        transform: translate3d(0, 6px, 0) scale(0.99);
+        transform: translate3d(0, 4px, 0);
       }
       100% {
         opacity: 1;
-        transform: translate3d(0, 0, 0) scale(1);
+        transform: translate3d(0, 0, 0);
       }
     }
 
@@ -287,7 +287,8 @@
     .fs-cta-left svg {
       width: 14px;
       height: 14px;
-      fill: currentColor;
+      fill: none;
+      stroke: currentColor;
       opacity: 0.78;
       flex-shrink: 0;
     }
@@ -299,6 +300,7 @@
     }
 
     .fs-cta-shortcut {
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
       font-size: 10.5px;
       font-weight: 500;
       color: var(--muted);
@@ -822,13 +824,12 @@
 </head>
 <body>
   <div class="flyout-shell is-hydrating" id="flyout-shell">
-    <!-- Header -->
     <div class="flyout-header">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 20 20" fill="none">
-            <rect x="2.5" y="3.5" width="15" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/>
-            <rect x="5.5" y="6.5" width="9" height="7" rx="1.2" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.2"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4.5" width="18" height="15" rx="3"/>
+            <rect x="7" y="8" width="10" height="8" rx="1.2" stroke-opacity="0.38"/>
           </svg>
         </div>
         <div class="brand-name">Winh</div>
@@ -840,14 +841,14 @@
       </button>
     </div>
 
-    <!-- Scrollable Controls -->
     <div class="content" id="flyout-content">
-      <!-- Live Now Playing Strip -->
       <div class="now-playing-strip" id="now-playing-strip">
         <div class="mini-art">
           <img id="mini-art-img" alt="" />
-          <svg id="mini-art-fallback" width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.45)">
-            <path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>
+          <svg id="mini-art-fallback" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.48)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/>
+            <circle cx="18" cy="16" r="3"/>
           </svg>
         </div>
         <div class="mini-meta">
@@ -857,16 +858,14 @@
         <span class="mini-tag" id="mini-status">Playing</span>
       </div>
 
-      <!-- Fullscreen Lyrics Action -->
       <button class="fullscreen-cta" id="btn-fullscreen-lyrics" title="Toggle Fullscreen Lyrics (Shift+F11)">
         <div class="fs-cta-left">
-          <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
           <span class="fs-cta-title">Fullscreen Lyrics</span>
         </div>
         <span class="fs-cta-shortcut" id="fs-cta-pill">Shift+F11</span>
       </button>
 
-      <!-- Mode & Motion -->
       <div class="section first">
         <div class="segmented" id="mode-segmented">
           <button class="seg-btn active" data-mode="Music Sync">Music Sync</button>
@@ -893,7 +892,6 @@
         </div>
       </div>
 
-      <!-- Edge Light Geometry -->
       <div class="section">
         <div class="section-head">
           <span class="section-title">Edge Light</span>
@@ -934,7 +932,6 @@
         </div>
       </div>
 
-      <!-- Colors -->
       <div class="section">
         <div class="section-head">
           <span class="section-title">Colors</span>
@@ -981,7 +978,6 @@
           </div>
         </div>
 
-        <!-- Extra Colors 3 & 4 -->
         <div class="extra-colors-row" id="extra-colors-row">
           <div class="mini-color-pill">
             <div class="mini-color-swatch" id="swatch-3">
@@ -1007,7 +1003,6 @@
         <div class="chips-wrap" id="presets-container"></div>
       </div>
 
-      <!-- Display & Mini Player -->
       <div class="section">
         <div class="section-head">
           <span class="section-title">Display &amp; Player</span>
@@ -1040,13 +1035,13 @@
       </div>
     </div>
 
-    <!-- Footer -->
     <div class="footer">
       <div class="footer-meta" id="footer-meta">Music Sync · 2 Colors</div>
       <button class="btn-quit" id="btn-quit">Quit</button>
     </div>
   </div>
 
+  <script src="./tauri-bridge.js"></script>
   <script src="./ui/color-utils.js"></script>
   <script src="./ui/color-wheel.js"></script>
   <script>
@@ -1105,7 +1100,6 @@
       }
     }
 
-    // DOM References
     const flyoutShell = document.getElementById('flyout-shell');
     const flyoutContent = document.getElementById('flyout-content');
     const btnToggleEnabled = document.getElementById('btn-toggle-enabled');
@@ -1200,7 +1194,6 @@
       }
     });
 
-    // Build Presets
     const presetButtons = [];
     function renderPresets() {
       presetsContainer.textContent = '';
@@ -1413,7 +1406,6 @@
       selectDisplay.value = hasMatch ? currentTarget : 'all';
     }
 
-    // --- Event Listeners ---
     btnToggleEnabled.addEventListener('click', () => {
       settings.enabled = !settings.enabled;
       syncVisualAccents();
@@ -1568,7 +1560,6 @@
       pushPartialUpdate({ widgetPosition: null });
     });
 
-    // --- IPC Listeners ---
     function finishHydration() {
       if (!flyoutShell.classList.contains('is-hydrating')) return;
       void flyoutShell.offsetHeight;
